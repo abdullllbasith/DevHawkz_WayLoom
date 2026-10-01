@@ -1,0 +1,23 @@
+{
+  "name": "@wayloom/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WayLoom Next.js frontend foundation.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "16.3.8",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0"
+  }
+}

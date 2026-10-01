@@ -1,0 +1,29 @@
+{
+  "name": "wayloom",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WayLoom monorepo foundation. Application features are added by later tasks.",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @wayloom/web",
+    "dev:api": "npm run dev --workspace @wayloom/api",
+    "build": "tsc -b && npm run build --workspace @wayloom/web",
+    "typecheck": "tsc -b && npm run typecheck --workspace @wayloom/web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

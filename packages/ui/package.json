@@ -1,0 +1,7 @@
+{
+  "name": "@wayloom/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reserved shared UI package. Components are not implemented in this task."
+}

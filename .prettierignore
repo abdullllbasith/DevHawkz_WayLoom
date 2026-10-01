@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+package-lock.json
+00_PROJECT_RULES.md
+.cursor
+apps/api/src/generated

@@ -1,0 +1,7 @@
+{
+  "name": "@wayloom/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reserved shared domain package. Domain models are not implemented in this task."
+}

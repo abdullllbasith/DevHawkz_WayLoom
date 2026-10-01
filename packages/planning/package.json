@@ -1,0 +1,7 @@
+{
+  "name": "@wayloom/planning",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reserved TypeScript planning contracts package. This is not the Python planning service."
+}

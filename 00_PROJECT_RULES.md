@@ -1,0 +1,780 @@
+# WayLoom — Cursor Project Rules
+
+**Project:** WayLoom  
+**Competition:** Rootcode Tech Triathlon 2026  
+**Rule Version:** 1.0  
+**Primary Technical Source of Truth:** WayLoom Hackathon Technical Blueprint v1.4  
+**Task Source of Truth:** `00_MASTER_TASK_MAP_v1.1.md`
+
+---
+
+## 1. Purpose
+
+These rules apply to every Cursor AI Agent session working on WayLoom.
+
+The goal is to build the approved WayLoom working system without silently changing its architecture, business workflow, security model, or submitted Designathon experience.
+
+When a task conflicts with these rules or the approved Blueprint v1.4, **stop and ask for a decision**.
+
+---
+
+# 2. Source-of-Truth Hierarchy
+
+Use this priority order when interpreting requirements:
+
+1. **Official Challenge Booklet** — competition requirements and constraints.
+2. **Submitted WayLoom Designathon documentation** — approved product experience and screen structure.
+3. **WayLoom Technical Blueprint v1.4** — approved technical architecture and implementation rules.
+4. **`00_MASTER_TASK_MAP_v1.1.md`** — development sequence and task dependencies.
+5. Individual Cursor task files — exact scope for the current task.
+6. Existing implementation — only when it does not conflict with the sources above.
+
+If sources conflict:
+
+- Do not silently choose a solution.
+- Identify the conflict.
+- Explain the affected requirement.
+- Stop and request a decision.
+
+---
+
+# 3. Core Product Rules
+
+WayLoom has exactly four operational roles:
+
+- Dispatcher
+- Loader
+- Driver
+- Store Manager
+
+The approved operational lifecycle is:
+
+```text
+Store Manager
+    ↓
+Order Placement
+    ↓
+Dispatcher
+    ↓
+Order Consolidation
+    ↓
+Planning & Allocation
+    ↓
+Loader
+    ↓
+Loading & Verification
+    ↓
+Driver
+    ↓
+Delivery Execution
+    ↓
+Store Manager
+    ↓
+Receipt Confirmation
+    ↓
+Dispatcher
+    ↓
+Operational Closure
+```
+
+Do not introduce additional operational roles without explicit approval.
+
+Do not remove or materially alter an approved role workflow without explicit approval.
+
+---
+
+# 4. Designathon Fidelity
+
+The Hackathon implementation must follow the submitted Designathon experience.
+
+Do not invent replacement screens when an approved screen already exists.
+
+Approved Dispatcher screens:
+
+1. Dispatcher Dashboard
+2. Orders Management
+3. Planning and Allocation
+4. Allocation Confirmation
+5. Routes Management
+6. Route Details
+7. Deferral Management
+8. Operational Exceptions
+
+Approved Loader screens:
+
+1. Assigned Loading Tasks
+2. Stop-Ordered Loading List
+3. Loading Verification
+4. Loading Shortfall Reporting
+
+Approved Driver screens:
+
+1. My Routes
+2. Delivery Stop Details
+3. Delivery Outcome
+4. Proof of Delivery
+
+Approved Store Manager screens:
+
+1. Store Dashboard
+2. Create Order
+3. Order Confirmation and Tracking
+4. Confirm Receipt and Report Issues
+
+If implementation requires a screen not listed above, first determine whether it can be implemented as a state, modal, component, or sub-view inside an approved flow.
+
+Do not create a new primary workflow without approval.
+
+---
+
+# 5. Approved Architecture
+
+The approved architecture is:
+
+```text
+Next.js + React + TypeScript
+          |
+          v
+Node.js + TypeScript API
+          |
+    +-----+----------------+
+    |                      |
+    v                      v
+PostgreSQL             Python + FastAPI
+Prisma                 Planning / AI Service
+                           |
+                           v
+                     OR-Tools / Rules
+```
+
+Repository boundaries:
+
+```text
+apps/web/
+apps/api/
+
+services/planning/
+
+packages/ui/
+packages/domain/
+packages/planning/
+packages/shared/
+
+database/migrations/
+database/seed/
+
+data/competition-import/
+
+docs/
+tests/unit/
+tests/e2e/
+```
+
+### Boundary rules
+
+- `apps/web/` — Next.js frontend only.
+- `apps/api/` — main Node.js/TypeScript backend.
+- `services/planning/` — Python/FastAPI planning and AI service.
+- `packages/ui/` — reusable UI components.
+- `packages/domain/` — shared domain concepts/invariants where appropriate.
+- `packages/planning/` — shared TypeScript planning contracts/utilities.
+- `packages/shared/` — generic shared types/utilities.
+- PostgreSQL is the system of record.
+- Prisma is the approved Node.js ORM.
+- OR-Tools may be used by the planning service.
+- Do not create competing backend architectures.
+
+---
+
+# 6. Technology Rules
+
+Approved primary technologies:
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS/design tokens
+- Node.js
+- PostgreSQL
+- Prisma
+- Python
+- FastAPI
+- OR-Tools
+- IndexedDB for required offline operational storage
+- Docker Compose
+- Unit, integration, and end-to-end testing
+
+Do not replace approved technologies with:
+
+- Firebase
+- Supabase as the primary backend
+- MongoDB
+- another ORM
+- another planning backend
+- a second competing API backend
+- a serverless architecture that bypasses the approved application architecture
+
+Do not add major technologies without approval.
+
+---
+
+# 7. Database Rules
+
+PostgreSQL is the authoritative system of record.
+
+Do not:
+
+- duplicate authoritative business state in frontend storage
+- use IndexedDB as the primary database
+- bypass Prisma for normal Node database operations
+- create untracked schema changes
+- manually modify production data as a substitute for migrations
+
+Database changes must use controlled migrations.
+
+Later domain tasks must enforce:
+
+- relational integrity
+- appropriate constraints
+- transaction boundaries
+- concurrency protection
+- auditability where required
+
+---
+
+# 8. Domain Integrity Rules
+
+Critical business rules must be enforced server-side.
+
+Never rely only on frontend validation for business-critical rules.
+
+Examples:
+
+- Delivered orders cannot return to Planned.
+- A Driver cannot deliver an order outside their assigned trip.
+- A Loader cannot verify an unassigned loading task.
+- A Store Manager cannot access another outlet's protected resources.
+- Receipt confirmation cannot occur before delivery.
+- A confirmed allocation cannot violate hard planning constraints.
+- A sync event cannot be applied more than once.
+
+When adding a new state transition, verify:
+
+1. authorized role
+2. current state
+3. allowed next state
+4. related resource ownership
+5. required validation
+6. transaction/concurrency implications
+7. audit requirements
+
+---
+
+# 9. Planning Rules
+
+Planning feasibility must be deterministic and server-side.
+
+AI/LLM output must never be the authority for hard feasibility.
+
+The planning system must respect:
+
+- vehicle weight capacity
+- vehicle volume capacity
+- temperature requirements
+- refrigerated vehicle requirements
+- van-only outlet requirements
+- vehicle/home-depot compatibility
+- brand/district rules
+- whole-order assignment
+- maximum two trips per vehicle per day
+- delivery windows
+- trip-time constraints
+- fuel quota
+- planning cutoff
+- demand exceeding capacity
+- deferral with reason
+
+Every hard constraint must have an explicit validator.
+
+Do not hide a hard constraint inside an LLM prompt.
+
+---
+
+# 10. Fuel Data Rules
+
+Never assume that a fuel-related field exists in the competition dataset.
+
+Fuel lineage must be explicit:
+
+```text
+Competition/configured source
+        ↓
+Normalized vehicle data
+        ↓
+Trip distance
+        ↓
+Vehicle efficiency
+        ↓
+Fuel consumption
+        ↓
+Weekly fuel usage
+        ↓
+Weekly quota validation
+```
+
+The implementation must clearly distinguish:
+
+- source fields
+- configured domain values
+- derived fields
+
+If the actual dataset does not contain a required fuel attribute, stop and follow the approved data-lineage design rather than inventing source data.
+
+---
+
+# 11. Cutoff Rules
+
+The approved planning cutoff is a domain/backend rule.
+
+Do not implement cutoff behavior only in the UI.
+
+Orders submitted before the approved cutoff may be eligible for the corresponding planning run.
+
+Orders submitted after the cutoff must follow the approved next-run behavior.
+
+Preserve:
+
+- submission time
+- planning eligibility
+- planning result
+
+Do not silently change cutoff semantics.
+
+---
+
+# 12. AI Rules
+
+WayLoom AI is **decision support**, not an autonomous dispatcher.
+
+AI may assist with:
+
+- planning explanations
+- allocation recommendations/explanations
+- exception/risk explanations
+- operational insights
+- approved demand/order intelligence
+
+AI must not:
+
+- override hard planning constraints
+- directly create an infeasible allocation
+- bypass authorization
+- change critical domain state without approved deterministic validation
+- become a required dependency for core operational continuity
+- make autonomous operational decisions outside its approved contract
+
+All material AI-assisted behavior must be explainable and auditable where required.
+
+AI failure must degrade gracefully.
+
+If the AI service is unavailable:
+
+> deterministic planning and core transactional workflow must continue.
+
+---
+
+# 13. Offline Rules
+
+Offline functionality is real operational functionality.
+
+Required principles:
+
+- minimum necessary operational data may be cached locally
+- no authentication/session tokens in localStorage or IndexedDB
+- delivery records can be saved locally when offline
+- each offline event requires a unique client event ID
+- synchronization must be idempotent
+- failed synchronization must preserve the local record
+- reconciliation must follow the approved conflict policy
+- server-side authorization remains authoritative
+
+Do not implement fake offline behavior that only changes the UI.
+
+Do not silently invent conflict-resolution rules.
+
+---
+
+# 14. Authentication & Security Rules
+
+Security is mandatory.
+
+Approved authentication architecture:
+
+- server-managed sessions
+- secure cookies
+- appropriate `HttpOnly`
+- `Secure` in production
+- appropriate `SameSite`
+- server-side session records
+- session expiry/revocation
+- Argon2id password hashing
+- CSRF protection for cookie-authenticated state-changing requests
+
+Never:
+
+- store auth/session tokens in localStorage
+- store auth/session tokens in IndexedDB
+- hard-code credentials
+- commit secrets
+- log passwords/tokens/API keys
+- bypass authorization for convenience
+
+Authorization must include:
+
+- role-level authorization
+- object-level authorization
+- state-transition authorization
+
+All client-provided identifiers must be treated as untrusted.
+
+---
+
+# 15. API Rules
+
+API contracts must be explicit.
+
+Use:
+
+- validated request schemas
+- validated response contracts where appropriate
+- consistent error structures
+- safe error messages
+- authorization checks
+- transaction boundaries for critical operations
+- idempotency where required
+
+Do not expose:
+
+- passwords
+- session secrets
+- internal credentials
+- unnecessary sensitive database fields
+- stack traces in production responses
+
+Do not make frontend assumptions that are not represented in the API contract.
+
+---
+
+# 16. Competition Data Rules
+
+The Hackathon uses approved competition datasets.
+
+Expected shared data includes:
+
+- `outlets.csv`
+- `vehicles.csv`
+- `calendar.csv`
+
+Hackathon planning may also use the approved additional operational datasets:
+
+- `district_travel.csv`
+- `service_allowance.csv`
+
+Optional datasets must remain explicitly optional unless the blueprint makes them mandatory.
+
+Datathon-only training/test/submission data must remain isolated from Hackathon runtime data.
+
+Do not publish, upload, or expose confidential competition datasets.
+
+Do not invent competition records to compensate for missing data without clearly marking them as approved seed/configuration data.
+
+---
+
+# 17. UI/UX Rules
+
+The UI must preserve the submitted Designathon intent.
+
+Role/device expectations:
+
+| Role | Primary Device |
+|---|---|
+| Dispatcher | Desktop / large screen |
+| Loader | Tablet / touch |
+| Driver | Phone |
+| Store Manager | Responsive desktop/phone |
+
+Use the approved WayLoom design system:
+
+- Primary: `#2563EB`
+- Secondary: `#0F172A`
+- Accent: `#60A5FA`
+- Background: `#F8FAFC`
+- Surface: `#FFFFFF`
+- Text: `#111827`
+- Secondary text: `#64748B`
+- Success: `#16A34A`
+- Warning: `#F59E0B`
+- Font: Inter
+
+Functional status must not depend only on color.
+
+Do not redesign the product simply because a different UI pattern is easier to code.
+
+---
+
+# 18. Code Quality Rules
+
+Prefer:
+
+- small modules
+- clear responsibilities
+- typed interfaces
+- explicit domain functions
+- reusable validation
+- testable business logic
+- meaningful names
+- minimal duplication
+- predictable error handling
+
+Avoid:
+
+- giant files
+- giant controllers
+- business logic inside React components
+- duplicated constraint logic
+- hidden global state
+- magic constants without explanation
+- unnecessary abstractions
+- premature microservices
+
+Do not optimize prematurely.
+
+---
+
+# 19. Testing Rules
+
+Every meaningful implementation task must include appropriate tests.
+
+Testing layers:
+
+```text
+Unit
+  ↓
+Integration
+  ↓
+End-to-End
+```
+
+Critical business rules require deterministic tests.
+
+Planning must have fixtures for at least:
+
+- normal feasible allocation
+- weight capacity exceeded
+- volume capacity exceeded
+- no reefer
+- van-only
+- depot mismatch
+- delivery-window conflict
+- trip-time conflict
+- fuel quota exceeded
+- two-trip limit
+- cutoff exceeded
+- demand > capacity / deferral
+
+Do not claim tests passed unless they were actually executed.
+
+---
+
+# 20. Cursor Task Discipline
+
+Cursor must work only within the current task scope.
+
+Before coding:
+
+1. Read the current task.
+2. Read its dependencies.
+3. Read relevant project rules.
+4. Inspect existing implementation.
+5. Identify conflicts.
+6. State the implementation plan internally/briefly.
+7. Implement only the requested scope.
+
+After coding:
+
+1. Run required tests.
+2. Run required verification commands.
+3. Inspect changed files.
+4. Check for unintended architecture changes.
+5. Report deviations.
+6. Report the exact status.
+
+Do not start future tasks automatically.
+
+---
+
+# 21. No Silent Scope Expansion
+
+Do not silently:
+
+- implement the next task
+- refactor unrelated modules
+- redesign approved screens
+- change database architecture
+- replace libraries
+- introduce new services
+- change business rules
+- change role permissions
+- modify the planning strategy
+- change offline conflict behavior
+
+If a prerequisite is missing:
+
+> stop and report it.
+
+Do not use scope expansion as a workaround.
+
+---
+
+# 22. Review Task Rules
+
+Review tasks are different from build tasks.
+
+For a task marked `REVIEW`:
+
+- inspect implementation
+- compare against source of truth
+- identify defects
+- identify deviations
+- identify missing tests
+- provide recommended changes
+
+Do **not** modify code unless the task explicitly says modification is required.
+
+---
+
+# 23. Gate Rules
+
+A phase gate is pass/fail.
+
+A gate passes only when:
+
+- required implementation exists
+- required tests pass
+- required verification passes
+- no critical architecture deviation exists
+- security requirements for that phase pass
+- Designathon fidelity is preserved where applicable
+
+If a gate fails:
+
+```text
+FAIL
+ ↓
+Report exact failure
+ ↓
+Rework
+ ↓
+Re-test
+ ↓
+Re-review
+ ↓
+Gate again
+```
+
+Do not move to the next phase after a failed critical gate.
+
+---
+
+# 24. Architecture Change Control
+
+The architecture is frozen unless explicitly changed.
+
+Any proposal that changes:
+
+- primary backend
+- database
+- planning service
+- service boundaries
+- authentication architecture
+- core state machine
+- role model
+- offline strategy
+- planning constraint model
+- submitted screen structure
+
+requires explicit approval and a new blueprint version.
+
+Do not silently create v1.5 behavior while claiming compliance with v1.4.
+
+---
+
+# 25. Stop Conditions
+
+Cursor must stop and ask for a decision when:
+
+1. Requirements conflict.
+2. The blueprint does not define required behavior.
+3. A new role is required.
+4. A new primary service is required.
+5. A new database technology is required.
+6. A hard planning constraint cannot be implemented as specified.
+7. A security control must be weakened.
+8. Competition data is inconsistent with the approved model.
+9. A Designathon flow must materially change.
+10. AI would need autonomous operational authority.
+11. Offline conflict behavior is undefined.
+12. Completing the task requires changing the frozen architecture.
+
+The stop report must contain:
+
+```text
+Issue:
+Why it matters:
+Affected requirement:
+Recommended solution:
+Decision required:
+```
+
+---
+
+# 26. Completion Report Standard
+
+At the end of every task, report:
+
+```text
+Status:
+What was changed:
+Files changed:
+Tests run:
+Verification results:
+Deviations:
+Known issues:
+Next approved task:
+```
+
+Use:
+
+- `COMPLETED`
+- `BLOCKED`
+- `REWORK_REQUIRED`
+
+Do not report `COMPLETED` when acceptance criteria have not been verified.
+
+---
+
+# 27. Final Rule
+
+The objective is not to write the maximum amount of code.
+
+The objective is to build:
+
+> **the approved WayLoom system correctly, securely, testably, and with continuity from the submitted Designathon design.**
+
+When uncertain:
+
+**Do not invent.  
+Do not silently change.  
+Do not weaken constraints.  
+Do not skip verification.  
+Stop and ask.**

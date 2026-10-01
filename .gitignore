@@ -1,0 +1,40 @@
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Local environment files. .env.example is the only committed environment template.
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python local environments and caches. Do not ignore data/ .
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+tmp/
+temp/
+*.tmp
+*.local
+
+# Local database files. Competition import inputs under data/ stay visible to Git.
+*.db
+*.sqlite
+
+# Generated Prisma Client. `prisma generate` recreates it during the API build.
+apps/api/src/generated/

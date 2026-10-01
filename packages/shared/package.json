@@ -1,0 +1,7 @@
+{
+  "name": "@wayloom/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reserved generic shared TypeScript package. No shared utilities are implemented in this task."
+}
