@@ -3,5 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Reserved shared UI package. Components are not implemented in this task."
+  "description": "Reusable WayLoom UI primitives. No components are implemented yet.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts"
 }

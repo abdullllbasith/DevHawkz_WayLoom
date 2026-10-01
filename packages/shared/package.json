@@ -3,5 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Reserved generic shared TypeScript package. No shared utilities are implemented in this task."
+  "description": "Cross-cutting TypeScript utilities. None are implemented yet.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts"
 }

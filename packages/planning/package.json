@@ -3,5 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Reserved TypeScript planning contracts package. This is not the Python planning service."
+  "description": "Shared TypeScript planning contracts. This is not the Python planning service.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts"
 }
