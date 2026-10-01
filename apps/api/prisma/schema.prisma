@@ -6,3 +6,26 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum OperationalRole {
+  DISPATCHER
+  LOADER
+  DRIVER
+  STORE_MANAGER
+
+  @@map("operational_role")
+}
+
+/// Identity record only. Login, sessions, and password hashing are not implemented here.
+model User {
+  id              String          @id @default(uuid()) @db.Uuid
+  loginIdentifier String          @unique @map("login_identifier")
+  displayName     String          @map("display_name")
+  role            OperationalRole
+  active          Boolean
+  passwordHash    String          @map("password_hash")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("users")
+}

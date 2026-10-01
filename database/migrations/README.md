@@ -1,3 +1,3 @@
 # database/migrations
 
-Prisma and SQL migrations are not created in this task.
+Prisma migrations for the API schema live in `apps/api/prisma/migrations`.

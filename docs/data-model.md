@@ -8,7 +8,7 @@ WayLoom uses UUIDs as the internal primary identifiers for persisted domain enti
 
 ### Internal entity identity
 
-The primary key of a persisted domain entity is a UUID. That UUID is the internal database identity.
+The primary key of a persisted domain entity is a UUID. That UUID is the internal database identity. Prisma models use `@id @default(uuid()) @db.Uuid`, so PostgreSQL stores the value as `uuid` and Prisma's `uuid()` default generates it.
 
 ### Business and source identifiers
 
