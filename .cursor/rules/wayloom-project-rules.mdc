@@ -226,6 +226,8 @@ Do not add major technologies without approval.
 
 PostgreSQL is the authoritative system of record.
 
+Persisted domain entities use UUID internal primary keys. Business and source identifiers stay in separate fields. UUIDs are not planning-ordering or tie-breaking fields. The decision is recorded in `docs/data-model.md`.
+
 Do not:
 
 - duplicate authoritative business state in frontend storage
