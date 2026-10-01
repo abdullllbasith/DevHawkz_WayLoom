@@ -17,6 +17,8 @@ python -m venv .venv
 
 `pylock.toml` is a pip lock for CPython 3.12 on Windows. pip 26 can install it. The virtual environment created by Python 3.12 starts with an older pip, so the upgrade step is required.
 
+The Compose image is Linux. It installs `fastapi==0.142.2` and `uvicorn==0.54.0` from `pyproject.toml` so it does not use the Windows wheels in `pylock.toml`. There is no second lockfile.
+
 ## Configuration
 
 The process reads the repository root `.env` when that file exists. Existing environment variables win over the file. `NODE_ENV` must be `development`, `test`, or `production`.

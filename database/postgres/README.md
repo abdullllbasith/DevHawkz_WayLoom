@@ -73,8 +73,6 @@ docker compose up -d postgres
 
 That deletes both local databases. It is not a reset of one environment. The volume name includes the Compose project name `wayloom`.
 
-## Later tasks
+## Compose
 
-TASK-01-05 connects the Node.js API through Prisma. No Prisma schema or migration is part of this foundation.
-
-TASK-01-07 owns the rest of Docker Compose. `web`, `api`, and `planning` are still deferred placeholders. This `postgres` service is the only PostgreSQL definition. TASK-01-07 must reuse it rather than add another database service.
+This `postgres` service is the only PostgreSQL definition. The API, planning, and web services in `docker-compose.yml` reuse it. The API container connects with hostname `postgres`. Host commands keep using `127.0.0.1`. `wayloom_development` and `wayloom_test` stay separate. The planning service does not connect to PostgreSQL.

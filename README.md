@@ -46,7 +46,9 @@ Use npm only. The lockfile is `package-lock.json`. Do not add `yarn.lock` or `pn
 
 Do not commit `.env` or any `.env.*` file other than `.env.example`. Do not reuse development values for test or production. Production secrets are never stored in the repository. `LOG_LEVEL=info` is a safe default. Database user, password, session secret, and any future provider key are secrets and must be supplied outside source control.
 
-`npm run dev` starts the Next.js frontend only. `npm run dev:api` starts the Node.js API foundation only. The planning service starts with its own Python command, documented in `services/planning/README.md`. Local PostgreSQL starts with `docker compose up -d postgres`. Database names, roles, and reset rules are in `database/postgres/README.md`.
+`npm run dev` starts the Next.js frontend only. `npm run dev:api` starts the Node.js API foundation only. The planning service starts with its own Python command, documented in `services/planning/README.md`. Those host commands use `127.0.0.1`.
+
+`docker compose up -d` starts the same foundation in containers: PostgreSQL, the API, the planning service, and the frontend. The API container talks to PostgreSQL through the Compose hostname `postgres`. Published ports stay on `127.0.0.1`. Database names, roles, and reset rules are in `database/postgres/README.md`.
 
 ## Commands
 
