@@ -9,6 +9,7 @@ import { assertImportDatabaseTarget } from "./database-target.js";
 import {
   competitionImportDirectory,
   discoverHackathonDatasets,
+  HACKATHON_DATASET_FILES,
   rejectNonHackathonDataset,
 } from "./datasets.js";
 import { executeImport, formatImportSummary, sameSourceValues } from "./identity.js";
@@ -192,6 +193,27 @@ test("a new source record is inserted once inside the transaction", async () => 
   assert.deepEqual(writes, ["V1", "V2"]);
   assert.equal(summary.inserted, 2);
   assert.equal(formatImportSummary(summary), formatImportSummary(summary));
+});
+
+test("the Hackathon runtime import does not discover files outside its approved set", async () => {
+  assert.deepEqual([...HACKATHON_DATASET_FILES], ["outlets.csv", "vehicles.csv", "calendar.csv"]);
+  const directory = competitionImportDirectory(path.resolve(import.meta.dirname, "../../../.."));
+  const discovered = await discoverHackathonDatasets(directory);
+  assert.deepEqual(discovered.errors, []);
+  assert.deepEqual([...discovered.present], ["outlets.csv", "vehicles.csv", "calendar.csv"]);
+  for (const fileName of [
+    "district_travel.csv",
+    "service_allowance.csv",
+    "traffic_speed.csv",
+    "road_conditions.csv",
+    "datathon-training.csv",
+  ]) {
+    assert.ok(rejectNonHackathonDataset(fileName));
+    assert.equal(
+      discovered.present.some((present) => present === fileName),
+      false,
+    );
+  }
 });
 
 test("files outside the Hackathon set are refused", async () => {
