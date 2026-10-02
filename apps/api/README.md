@@ -62,6 +62,8 @@ npm run prisma:reset-test
 
 `npm run import:road-conditions --workspace @wayloom/api` imports `road_conditions.csv` into `road_conditions_source` when the file is present. The source identity is district and date. The date stays text. An absent file is reported as skipped and writes nothing. A validation failure, duplicate identity, or existing-row conflict writes nothing and exits non-zero. It is not part of the three-file Hackathon runtime import and it is not an application startup dependency.
 
+`npm run seed:scenario --workspace @wayloom/api` creates the development users and one submitted order. It uses imported competition outlets, vehicles, and calendar rows. It does not create trips or execution records. Credentials are documented in `database/seed/README.md`.
+
 ## Errors
 
 Unexpected failures return JSON:
