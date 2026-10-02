@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { createApp } from "./app.js";
 import { loadConfig, type ApiConfig } from "./config.js";
 import { getPrismaClient } from "./db.js";
-import { createLogger } from "./log.js";
+import { createLogger, redactSecrets } from "./log.js";
 import { createLoginRateLimiter } from "./security/login-rate-limit.js";
 import { prismaSessionStore } from "./security/session-store.js";
 import { prismaUserDirectory } from "./security/user-directory.js";
@@ -13,7 +13,7 @@ try {
 } catch (error) {
   const message =
     error instanceof Error ? error.message : "API failed to start.";
-  console.error(message);
+  console.error(redactSecrets(message));
   process.exit(1);
 }
 

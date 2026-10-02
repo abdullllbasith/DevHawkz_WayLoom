@@ -1,3 +1,4 @@
+import { assertRuntimeDatabaseUrl } from "./runtime-database.js";
 import { parseLoginRateLimit, type LoginRateLimitConfig } from "./security/login-rate-limit.js";
 
 export type NodeEnvironment = "development" | "test" | "production";
@@ -25,6 +26,7 @@ const defaultDevelopmentPort = 4000;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const nodeEnv = parseNodeEnvironment(env.NODE_ENV);
+  assertRuntimeDatabaseUrl(env.DATABASE_URL, nodeEnv);
   return {
     nodeEnv,
     host: parseHost(env.API_HOST, nodeEnv),

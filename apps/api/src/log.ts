@@ -16,13 +16,17 @@ export function createLogger(level: LogLevel): Logger {
   return {
     error(message: string) {
       if (rank[level] >= rank.error) {
-        console.error(message);
+        console.error(redactSecrets(message));
       }
     },
     info(message: string) {
       if (rank[level] >= rank.info) {
-        console.info(message);
+        console.info(redactSecrets(message));
       }
     },
   };
+}
+
+export function redactSecrets(message: string): string {
+  return message.replace(/postgres(?:ql)?:\/\/\S+/gi, "postgresql://[redacted]");
 }
