@@ -35,6 +35,7 @@ model User {
   reportedExceptions Exception[]      @relation("ExceptionReporter")
   receipts          Receipt[]         @relation("ReceiptStoreManager")
   auditEvents       AuditEvent[]
+  outletAssignments UserOutlet[]
 
   @@map("users")
 }
@@ -114,8 +115,21 @@ model Outlet {
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   orders             Order[]
+  userAssignments    UserOutlet[]
 
   @@map("outlets")
+}
+
+/// Store Manager outlet authorization. Actor fields on orders and receipts are not this relationship.
+model UserOutlet {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  outletId String @map("outlet_id") @db.Uuid
+  user     User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  outlet   Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, outletId])
+  @@map("user_outlets")
 }
 
 /// Vehicle master data. driver_user_id is an application assignment, not a vehicles.csv column.

@@ -275,7 +275,7 @@ The session cookie name is `wayloom_session`. It is `HttpOnly`, `Path=/`, and `S
 
 ## Store Manager outlet authorization
 
-A Store Manager's outlet scope is the dedicated assignment table `user_outlets`. One Store Manager may be assigned to one or more outlets. This representation is not implemented yet. It does not add authorization checks, middleware, or APIs.
+A Store Manager's outlet scope is the dedicated assignment table `user_outlets`. One Store Manager may be assigned to one or more outlets. The table and the object checks exist. They do not add order, trip, loading, or receipt APIs.
 
 PostgreSQL table `user_outlets`:
 
