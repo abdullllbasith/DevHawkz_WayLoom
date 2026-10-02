@@ -54,6 +54,8 @@ npm run prisma:reset-test
 
 `npm run import:calendar --workspace @wayloom/api` imports `calendar.csv` into `calendar_source`. That table is competition source data. The source date is the row identity. A validation failure writes nothing.
 
+`npm run import:district-travel --workspace @wayloom/api` imports `district_travel.csv` into `district_travel_source`. That table is competition source data. The source identity is depot and district. It is not part of the three-file Hackathon runtime import. A validation failure writes nothing.
+
 ## Errors
 
 Unexpected failures return JSON:

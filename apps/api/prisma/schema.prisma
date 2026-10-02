@@ -412,3 +412,18 @@ model CalendarSource {
 
   @@map("calendar_source")
 }
+
+/// Competition district-travel source rows. Not an application-domain entity. Identity is (depot, district).
+model DistrictTravelSource {
+  depot                       String
+  district                    String
+  roadClass                   String @map("road_class")
+  freeFlowKmh                 String @map("free_flow_kmh")
+  depotToDistrictKm           String @map("depot_to_district_km")
+  depotToDistrictFreeflowMin  String @map("depot_to_district_freeflow_min")
+  interStopKm                 String @map("inter_stop_km")
+  interStopFreeflowMin        String @map("inter_stop_freeflow_min")
+
+  @@id([depot, district])
+  @@map("district_travel_source")
+}

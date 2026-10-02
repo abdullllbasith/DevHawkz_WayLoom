@@ -488,6 +488,8 @@ Hackathon planning may also use the approved additional operational datasets:
 - `district_travel.csv`
 - `service_allowance.csv`
 
+`district_travel.csv` is source-backed competition data in PostgreSQL table `district_travel_source`. The source identity is `(depot, district)`. All eight source columns are `TEXT`. It is not an application-domain entity. The representation is recorded in `docs/data-model.md`. That record resolves an architecture gap. It is not a Blueprint v1.4 specification.
+
 Optional datasets must remain explicitly optional unless the blueprint makes them mandatory.
 
 Datathon-only training/test/submission data must remain isolated from Hackathon runtime data.
