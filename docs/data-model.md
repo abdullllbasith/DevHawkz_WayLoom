@@ -269,8 +269,6 @@ PostgreSQL table `sessions`:
 
 A session with `revoked_at` set, or a session past `expires_at`, must not authenticate a request. Revocation is recorded in `revoked_at`.
 
-These decisions remain unresolved and are not chosen here:
+The server session lifetime is exactly 12 hours from `created_at`. `expires_at` is `created_at` plus 12 hours. `last_seen_at` does not extend `expires_at`. The session cookie `Max-Age` is 43200 seconds, the same 12 hours. After `expires_at`, the server rejects the session even if the browser still sends the cookie.
 
-- exact session lifetime
-- exact `SameSite` value
-
+The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace the later CSRF protection for cookie-authenticated state-changing requests.
