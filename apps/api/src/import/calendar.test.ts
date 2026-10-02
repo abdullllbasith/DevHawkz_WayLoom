@@ -40,10 +40,11 @@ test("invalid calendar values fail without a write", async () => {
     `${header}\n2024-01-07,6,Sun,1,2024,1,0,,0.0,0,0,2\n`,
   );
   assert.equal(invalidFlag.errors[0]?.field, "is_operating");
-  const invalidFestival = validateCalendarCsv(
-    `${header}\n2024-01-15,0,Mon,0,2024,3,0,unknown,1.0,1,0,1\n`,
+  const invalidRamp = validateCalendarCsv(
+    `${header}\n2024-01-16,1,Tue,0,2024,3,0,source_festival,high,0,0,1\n`,
   );
-  assert.equal(invalidFestival.errors[0]?.field, "festival");
+  assert.equal(invalidRamp.errors[0]?.field, "festival_ramp");
+  assert.equal(invalidRamp.rows.length, 0);
   const writes: string[] = [];
   const summary = await importValidatedCalendar({
     rows: invalidDate.rows,
@@ -54,6 +55,21 @@ test("invalid calendar values fail without a write", async () => {
   });
   assert.equal(summary.inserted, 0);
   assert.equal(writes.length, 0);
+});
+
+test("festival text outside the supplied file is preserved", () => {
+  const validated = validateCalendarCsv(
+    `${header}\n2024-01-15,0,Mon,0,2024,3,0,source_festival,1.5,1,0,1\n`,
+  );
+  assert.deepEqual(validated.errors, []);
+  assert.equal(validated.rows[0]?.festival, "source_festival");
+  assert.equal(validated.rows[0]?.festivalRamp, "1.5");
+  const blankFestival = validateCalendarCsv(
+    `${header}\n2024-01-01,0,Mon,0,2024,1,0,,0.25,0,0,1\n`,
+  );
+  assert.deepEqual(blankFestival.errors, []);
+  assert.equal(blankFestival.rows[0]?.festival, "");
+  assert.equal(blankFestival.rows[0]?.festivalRamp, "0.25");
 });
 
 test("a duplicate source date rejects the file and a rerun does not insert again", async () => {

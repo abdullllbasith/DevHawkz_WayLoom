@@ -27,29 +27,6 @@ const calendarHeaders = [
 
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const flags = ["0", "1"] as const;
-const festivals = [
-  "",
-  "christmas",
-  "deepavali",
-  "esala",
-  "new_year",
-  "poson",
-  "thai_pongal",
-  "vesak",
-] as const;
-const festivalRamps = [
-  "0.0",
-  "0.1",
-  "0.2",
-  "0.3",
-  "0.4",
-  "0.5",
-  "0.6",
-  "0.7",
-  "0.8",
-  "0.9",
-  "1.0",
-] as const;
 
 export type CalendarSourceRow = {
   sourceId: string;
@@ -201,23 +178,12 @@ function mapCalendarRow(
   const holidayError = flagError(rowNumber, sourceId, "is_holiday", values.is_holiday ?? "");
   const monsoonError = flagError(rowNumber, sourceId, "monsoon", values.monsoon ?? "");
   const operatingError = flagError(rowNumber, sourceId, "is_operating", values.is_operating ?? "");
-  const festivalError = requireAllowedValue(
-    CALENDAR_DATASET,
-    CALENDAR_FILE,
-    rowNumber,
-    sourceId,
-    "festival",
-    values.festival ?? "",
-    festivals,
-  );
-  const rampError = requireAllowedValue(
-    CALENDAR_DATASET,
-    CALENDAR_FILE,
+  const festival = values.festival ?? "";
+  const rampError = decimalSourceValue(
     rowNumber,
     sourceId,
     "festival_ramp",
     values.festival_ramp ?? "",
-    festivalRamps,
   );
   const isoYearError = integerToken(rowNumber, sourceId, "iso_year", values.iso_year ?? "");
   const isoWeekError = integerToken(rowNumber, sourceId, "iso_week", values.iso_week ?? "");
@@ -229,7 +195,6 @@ function mapCalendarRow(
     holidayError,
     monsoonError,
     operatingError,
-    festivalError,
     rampError,
     isoYearError,
     isoWeekError,
@@ -248,7 +213,6 @@ function mapCalendarRow(
     holidayError ||
     monsoonError ||
     operatingError ||
-    festivalError ||
     rampError ||
     isoYearError ||
     isoWeekError
@@ -305,7 +269,7 @@ function mapCalendarRow(
       isoYear: Number(values.iso_year),
       isoWeek: Number(values.iso_week),
       isPayday: Number(values.is_payday),
-      festival: values.festival ?? "",
+      festival,
       festivalRamp: values.festival_ramp ?? "",
       isHoliday: Number(values.is_holiday),
       monsoon: Number(values.monsoon),
@@ -359,6 +323,18 @@ function flagError(
     raw,
     flags,
   );
+}
+
+function decimalSourceValue(
+  rowNumber: number,
+  sourceId: string | null,
+  field: string,
+  raw: string,
+): ImportIssue | null {
+  if (/^(?:0|[1-9]\d*)\.\d+$/.test(raw)) {
+    return null;
+  }
+  return issue(rowNumber, sourceId, field, "Value must be a decimal source value.");
 }
 
 function integerToken(
