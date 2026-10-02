@@ -272,3 +272,19 @@ A session with `revoked_at` set, or a session past `expires_at`, must not authen
 The server session lifetime is exactly 12 hours from `created_at`. `expires_at` is `created_at` plus 12 hours. `last_seen_at` does not extend `expires_at`. The session cookie `Max-Age` is 43200 seconds, the same 12 hours. After `expires_at`, the server rejects the session even if the browser still sends the cookie.
 
 The session cookie name is `wayloom_session`. It is `HttpOnly`, `Path=/`, and `Secure` when the API runs in production. The cookie value is the opaque session identifier. The server stores only the SHA-256 hash of that identifier. The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace the later CSRF protection for cookie-authenticated state-changing requests.
+
+## Store Manager outlet authorization
+
+A Store Manager's outlet scope is the dedicated assignment table `user_outlets`. One Store Manager may be assigned to one or more outlets. This representation is not implemented yet. It does not add authorization checks, middleware, or APIs.
+
+PostgreSQL table `user_outlets`:
+
+| Column | Representation |
+|---|---|
+| `id` | UUID primary key |
+| `user_id` | UUID foreign key to `users` |
+| `outlet_id` | UUID foreign key to `outlets` |
+
+`user_id` and `outlet_id` are required. Both foreign keys use `ON DELETE RESTRICT`, the same referential action as the other application foreign keys. The pair `(user_id, outlet_id)` is unique, so the same user and outlet cannot be assigned twice.
+
+Store Manager object authorization must use this assignment. `orders.created_by_user_id` remains the actor who created the order. `receipts.store_manager_user_id` remains the actor who confirmed the receipt. Neither field authorizes a Store Manager for an outlet. `loading_records.loader_user_id`, `vehicles.driver_user_id`, and `delivery_records.driver_user_id` stay the loader and driver assignment fields.
