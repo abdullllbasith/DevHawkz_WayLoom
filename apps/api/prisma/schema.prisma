@@ -110,6 +110,7 @@ model Vehicle {
   depot             Depot
   driverUserId      String?                       @map("driver_user_id") @db.Uuid
   driver            User?                         @relation(fields: [driverUserId], references: [id], onDelete: Restrict)
+  trips             Trip[]
   createdAt         DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -155,10 +156,55 @@ model Order {
   orderWeightKg    Decimal                     @map("order_weight_kg")
   orderVolumeM3    Decimal                     @map("order_volume_m3")
   submittedAt      DateTime?                   @map("submitted_at") @db.Timestamptz(3)
+  tripStops        TripStop[]
   createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([outletId])
   @@index([createdByUserId])
   @@map("orders")
+}
+
+enum TripAllocationStatus {
+  PLANNED
+  CONFIRMED
+
+  @@map("trip_allocation_status")
+}
+
+/// Application route. id is the internal UUID. route_id is the official route identifier, not the stop sequence.
+model Trip {
+  id              String               @id @default(uuid()) @db.Uuid
+  routeId         String?              @unique @map("route_id")
+  operationalDate DateTime             @map("operational_date") @db.Date
+  vehicleId       String               @map("vehicle_id") @db.Uuid
+  vehicle         Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  depot           Depot
+  tripNumber      Int                  @map("trip_number")
+  status          TripAllocationStatus
+  stops           TripStop[]
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([vehicleId, operationalDate, tripNumber])
+  @@index([vehicleId])
+  @@map("trips")
+}
+
+/// One ordered delivery stop. seq_in_route is 0-based and is not route_id.
+model TripStop {
+  id              String    @id @default(uuid()) @db.Uuid
+  tripId          String    @map("trip_id") @db.Uuid
+  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  orderId         String    @map("order_id") @db.Uuid
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  sequence        Int       @map("seq_in_route")
+  plannedArrival  DateTime? @map("planned_arrival") @db.Time(0)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([tripId, sequence])
+  @@index([tripId])
+  @@index([orderId])
+  @@map("trip_stops")
 }
