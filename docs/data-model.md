@@ -185,3 +185,66 @@ When `traffic_speed.csv` or `road_conditions.csv` is absent, Hackathon startup a
 ### Deferred
 
 The Phase 5 normalized planning object remains undefined. No unit conversion is approved for service allowance, traffic speed, or road conditions. Datathon training, test, and submission files stay isolated and are not given Hackathon source tables by this section.
+
+## Data lineage
+
+Competition CSV values are source inputs. A stored source-backed row represents those values. A derived value is calculated later from source data or application state. An operational row is created by a WayLoom workflow. A derived or operational value does not replace the stored source value.
+
+Planning may read source-backed data later. A planning run does not update Outlet, Vehicle, `calendar_source`, `district_travel_source`, `service_allowance_source`, `traffic_speed_source`, or `road_conditions_source`. Planning outputs stay on operational records. The planning engine is not implemented in this section.
+
+No normal UI edit policy is defined for imported source fields. The importer inserts a new source identity and leaves an existing conflicting row unchanged. That is not an approval to edit source fields in the UI.
+
+### Competition datasets
+
+| Dataset | Destination | Role | Runtime |
+|---|---|---|---|
+| `outlets.csv` | `outlets` | Source-backed application master data | Three-file Hackathon runtime import |
+| `vehicles.csv` | `vehicles` | Source-backed application master data | Three-file Hackathon runtime import |
+| `calendar.csv` | `calendar_source` | Source-backed competition data | Three-file Hackathon runtime import |
+| `district_travel.csv` | `district_travel_source` | Source-backed additional competition data | Separate import |
+| `service_allowance.csv` | `service_allowance_source` | Source-backed additional competition data | Separate import |
+| `traffic_speed.csv` | `traffic_speed_source` | Optional source-backed competition data | Separate import. Absence does not fail startup |
+| `road_conditions.csv` | `road_conditions_source` | Optional source-backed competition data | Separate import. Absence does not fail startup |
+
+Datathon training, test, and submission files have no destination table and are not on any import path.
+
+Outlet import stores the supplied outlet fields. The internal `id` is a generated UUID and is not a source identifier. `created_at` and `updated_at` are application timestamps. Clock times are stored as time values. Enum tokens must match the approved outlet enums. No derived outlet field is created.
+
+Vehicle import stores the supplied vehicle fields, including `fuel_type`, `km_per_l`, and `weekly_fuel_quota_l`. Those are source properties. Calculated fuel use is not a vehicle column and is not written by import. `driver_user_id` is an application assignment. It is not a `vehicles.csv` column, and import leaves it empty. The internal `id` is a generated UUID.
+
+Calendar import stores the supplied calendar fields on `calendar_source`. `date` is a date. Flag and calendar-number fields are stored as integers. `festival` and `festival_ramp` stay text. The row is not a demand forecast or a planning result.
+
+District-travel, service-allowance, traffic-speed, and road-conditions imports store the supplied tokens as text. They do not copy those values onto Outlet, Vehicle, Order, Trip, or TripStop. `service_allowance_min` stays the source allowance. It is not an observed execution time. `depot_to_district_km`, `inter_stop_km`, and the freeflow minute fields stay source inputs. They are not calculated trip distance or trip duration.
+
+A repeated import of the same source values inserts nothing. A conflicting source value is reported and does not overwrite the stored row.
+
+### Domain records
+
+| Record | Lineage |
+|---|---|
+| User | Application identity. Not a competition-dataset identity. |
+| Outlet | Source-backed master data from `outlets.csv`. |
+| Vehicle | Source-backed master data from `vehicles.csv`. Driver assignment is application-owned. |
+| Order | Operational. Master-data import does not create orders. |
+| Trip and TripStop | Planning and allocation results. Not source CSV rows. |
+| LoadingRecord | Loading execution. |
+| DeliveryRecord | Delivery execution. |
+| ProofOfDelivery | Delivery evidence. |
+| Deferral | Planning or business outcome. |
+| Exception | Operational issue. |
+| Receipt | Store Manager receipt confirmation. |
+| SyncEvent | Synchronization processing. Not the source of the business record. |
+| AuditEvent | Selected system, security, or domain history. Not a copy of the database. |
+
+### Derived values
+
+These values are calculated later. They are not competition source fields, and they are not stored as source columns:
+
+- planning eligibility from submission time and cutoff;
+- trip duration from the approved travel and service-allowance inputs;
+- fuel use from trip distance and `km_per_l`;
+- capacity utilization from assigned orders;
+- a deferral reason from planning feasibility;
+- operational status from the domain workflow.
+
+The Phase 5 normalized planning object that would carry the travel and service inputs is still undefined. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
