@@ -8,6 +8,7 @@ import {
   type BusinessRoute,
   type OutletAssignmentLookup,
 } from "./security/api-boundary.js";
+import { writeSecurityAudit, type SecurityAuditWriter } from "./security/audit.js";
 import { currentUser, login, logout, type UserDirectory } from "./security/auth.js";
 import { createCsrfToken, csrfTokenMatches } from "./security/csrf.js";
 import {
@@ -17,7 +18,7 @@ import {
   type HttpSecurityConfig,
 } from "./security/http-security.js";
 import { clientAddress, createLoginRateLimiter, type LoginRateLimiter } from "./security/login-rate-limit.js";
-import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
+import { invalidateSession, readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
 
 export type AppOptions = {
   nodeEnv: NodeEnvironment;
@@ -29,6 +30,7 @@ export type AppOptions = {
   businessRoutes?: readonly BusinessRoute[];
   loginRateLimit?: LoginRateLimiter;
   httpSecurity?: HttpSecurityConfig;
+  audit?: SecurityAuditWriter;
 };
 
 export function createApp(options: AppOptions) {
@@ -77,6 +79,8 @@ export function createApp(options: AppOptions) {
           now: now(),
           assignedOutletIds,
           route: businessRoute,
+          log: options.log,
+          audit: options.audit,
         });
         return;
       }
@@ -119,6 +123,16 @@ export function createApp(options: AppOptions) {
           nodeEnv: options.nodeEnv,
         });
         if (!result.ok) {
+          await writeSecurityAudit({
+            writer: options.audit,
+            log: options.log,
+            event: {
+              action: "LOGIN_FAILURE",
+              occurredAt: now(),
+              actorUserId: null,
+              details: null,
+            },
+          });
           if (remoteAddress !== null) {
             loginRateLimit.recordFailure({
               loginIdentifier: credentials.loginIdentifier,
@@ -127,6 +141,25 @@ export function createApp(options: AppOptions) {
             });
           }
           sendError(response, 401, "authentication_failed", "Authentication failed.");
+          return;
+        }
+        const recorded = await writeSecurityAudit({
+          writer: options.audit,
+          log: options.log,
+          event: {
+            action: "LOGIN_SUCCESS",
+            occurredAt: now(),
+            actorUserId: result.user.id,
+            details: null,
+          },
+        });
+        if (!recorded) {
+          await invalidateSession({
+            sessionId: result.sessionId,
+            now: now(),
+            store: options.sessions,
+          });
+          sendError(response, 500, "internal_error", "Internal server error.");
           return;
         }
         const sessionToken = readSessionToken(result.cookie);
@@ -188,6 +221,16 @@ export function createApp(options: AppOptions) {
           store: options.sessions,
         });
         if (session !== null && sessionToken !== null && !csrfTokenMatches(sessionToken, headerValue(request.headers["x-wayloom-csrf"]))) {
+          await writeSecurityAudit({
+            writer: options.audit,
+            log: options.log,
+            event: {
+              action: "CSRF_REJECTED",
+              occurredAt: now(),
+              actorUserId: session.userId,
+              details: "POST /api/auth/logout",
+            },
+          });
           sendError(response, 403, "csrf_invalid", "CSRF validation failed.");
           return;
         }
@@ -197,6 +240,22 @@ export function createApp(options: AppOptions) {
           now: now(),
           nodeEnv: options.nodeEnv,
         });
+        if (session !== null) {
+          const recorded = await writeSecurityAudit({
+            writer: options.audit,
+            log: options.log,
+            event: {
+              action: "LOGOUT",
+              occurredAt: now(),
+              actorUserId: session.userId,
+              details: null,
+            },
+          });
+          if (!recorded) {
+            sendError(response, 500, "internal_error", "Internal server error.", { "set-cookie": result.cookie });
+            return;
+          }
+        }
         sendJson(response, 200, { status: "ok" }, { "set-cookie": result.cookie });
         return;
       }

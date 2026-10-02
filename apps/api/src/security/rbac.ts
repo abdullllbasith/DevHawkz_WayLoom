@@ -9,7 +9,8 @@ export type OperationalRoleName = (typeof operationalRoles)[number];
 
 export type RoleAuthorization =
   | { allowed: true; user: PublicUser }
-  | { allowed: false; status: 401 | 403 };
+  | { allowed: false; status: 401 }
+  | { allowed: false; status: 403; userId: string };
 
 export async function authorizeRole(input: {
   cookieHeader: string | undefined;
@@ -37,7 +38,7 @@ export async function authorizeRole(input: {
     role: record.role,
   };
   if (!isOperationalRole(record.role) || !input.allowedRoles.some((role) => role === record.role)) {
-    return { allowed: false, status: 403 };
+    return { allowed: false, status: 403, userId: record.id };
   }
   return { allowed: true, user };
 }

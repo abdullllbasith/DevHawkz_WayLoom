@@ -1,5 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { sendError } from "../errors.js";
+import type { Logger } from "../log.js";
+import { writeSecurityAudit, type SecurityAuditWriter } from "./audit.js";
 import type { UserDirectory } from "./auth.js";
 import { csrfTokenMatches, isStateChangingMethod } from "./csrf.js";
 import type { ObjectDecision } from "./object-authorization.js";
@@ -62,6 +64,8 @@ export async function enforceBusinessRoute(input: {
   now: Date;
   assignedOutletIds: OutletAssignmentLookup;
   route: BusinessRoute;
+  log: Logger;
+  audit?: SecurityAuditWriter;
 }): Promise<void> {
   const sessionToken = readSessionToken(input.cookieHeader);
   const session = await resolveAuthenticatedSession({
@@ -74,6 +78,16 @@ export async function enforceBusinessRoute(input: {
     return;
   }
   if (isStateChangingMethod(input.route.method) && !csrfTokenMatches(sessionToken, input.csrfHeader)) {
+    await writeSecurityAudit({
+      writer: input.audit,
+      log: input.log,
+      event: {
+        action: "CSRF_REJECTED",
+        occurredAt: input.now,
+        actorUserId: session.userId,
+        details: `${input.route.method} ${input.route.path}`,
+      },
+    });
     sendError(input.response, 403, "csrf_invalid", "CSRF validation failed.");
     return;
   }
@@ -89,6 +103,16 @@ export async function enforceBusinessRoute(input: {
       sendError(input.response, 401, "authentication_required", "Authentication required.");
       return;
     }
+    await writeSecurityAudit({
+      writer: input.audit,
+      log: input.log,
+      event: {
+        action: "AUTHORIZATION_DENIED",
+        occurredAt: input.now,
+        actorUserId: decision.userId,
+        details: "role",
+      },
+    });
     sendError(input.response, 403, "forbidden", "Forbidden.");
     return;
   }
@@ -104,6 +128,16 @@ export async function enforceBusinessRoute(input: {
   if (input.route.authorizeObject) {
     const objectDecision = await input.route.authorizeObject(context);
     if (!objectDecision.allowed) {
+      await writeSecurityAudit({
+        writer: input.audit,
+        log: input.log,
+        event: {
+          action: "OBJECT_AUTHORIZATION_DENIED",
+          occurredAt: input.now,
+          actorUserId: context.userId,
+          details: "object",
+        },
+      });
       sendError(input.response, 404, "not_found", "Not found.");
       return;
     }

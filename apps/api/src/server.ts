@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { loadConfig, type ApiConfig } from "./config.js";
 import { getPrismaClient } from "./db.js";
 import { createLogger, redactSecrets } from "./log.js";
+import { prismaSecurityAudit } from "./security/audit-store.js";
 import { createLoginRateLimiter } from "./security/login-rate-limit.js";
 import { prismaSessionStore } from "./security/session-store.js";
 import { prismaUserDirectory } from "./security/user-directory.js";
@@ -29,6 +30,7 @@ function start(config: ApiConfig): void {
       assignedOutletIds: (userId) => assignedOutletIds(prisma, userId),
       loginRateLimit: createLoginRateLimiter(config.loginRateLimit),
       httpSecurity: config.httpSecurity,
+      audit: prismaSecurityAudit(prisma),
     }),
   );
   let closing = false;

@@ -29,7 +29,7 @@ export type UserDirectory = {
 };
 
 export type LoginResult =
-  | { ok: true; user: PublicUser; cookie: string }
+  | { ok: true; user: PublicUser; cookie: string; sessionId: string }
   | { ok: false };
 
 export async function login(input: {
@@ -54,7 +54,7 @@ export async function login(input: {
     store: input.sessions,
     nodeEnv: input.nodeEnv,
   });
-  return { ok: true, user: publicUser(user), cookie: created.cookie };
+  return { ok: true, user: publicUser(user), cookie: created.cookie, sessionId: created.session.sessionId };
 }
 
 export async function currentUser(input: {
