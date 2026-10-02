@@ -50,6 +50,8 @@ npm run prisma:reset-test
 
 `npm run import:outlets --workspace @wayloom/api` imports `outlets.csv` into the Outlet table. A validation failure writes nothing. Vehicle and calendar files are not imported by that command.
 
+`npm run import:vehicles --workspace @wayloom/api` imports `vehicles.csv` into the Vehicle table. Driver assignment is not part of that file. A validation failure writes nothing.
+
 ## Errors
 
 Unexpected failures return JSON:
