@@ -422,6 +422,8 @@ Approved authentication architecture:
 - Argon2id password hashing
 - CSRF protection for cookie-authenticated state-changing requests
 
+The approved session store is PostgreSQL table `sessions`. Its columns are `id` (UUID primary key), `user_id` (UUID foreign key to `users`), `session_token_hash`, `expires_at`, `created_at`, nullable `revoked_at`, and `last_seen_at`. The browser cookie carries only an opaque session identifier. The raw identifier is not stored. `session_token_hash` is a cryptographic hash of that identifier. An expired session, or a session with `revoked_at` set, must not authenticate a request. The exact session lifetime and the exact `SameSite` value are unresolved and must not be chosen silently. The table representation is recorded in `docs/data-model.md`. It is not an implemented session mechanism.
+
 Never:
 
 - store auth/session tokens in localStorage

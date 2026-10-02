@@ -248,3 +248,29 @@ These values are calculated later. They are not competition source fields, and t
 - operational status from the domain workflow.
 
 The Phase 5 normalized planning object that would carry the travel and service inputs is still undefined. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
+
+## Server-managed sessions
+
+Authentication stays server-managed. The browser receives only an opaque session identifier in the server-managed authentication cookie. That raw identifier is not stored in PostgreSQL. The database stores only a cryptographic hash of it. Authentication tokens are not stored in `localStorage` or `IndexedDB`. JWT and localStorage authentication are not used.
+
+This representation is not implemented yet. It does not define login, cookies, middleware, or role checks.
+
+PostgreSQL table `sessions`:
+
+| Column | Representation |
+|---|---|
+| `id` | UUID primary key |
+| `user_id` | UUID foreign key to `users` |
+| `session_token_hash` | Cryptographic hash of the opaque session identifier |
+| `expires_at` | Session expiry |
+| `created_at` | Creation time |
+| `revoked_at` | Nullable. Set when the session is revoked |
+| `last_seen_at` | Last time the session was seen |
+
+A session with `revoked_at` set, or a session past `expires_at`, must not authenticate a request. Revocation is recorded in `revoked_at`.
+
+These decisions remain unresolved and are not chosen here:
+
+- exact session lifetime
+- exact `SameSite` value
+
