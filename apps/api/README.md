@@ -32,6 +32,8 @@ The API allows credentialed browser calls only from `WEB_ORIGIN`. Development an
 
 Successful login, failed login, logout, role denial, object denial, and CSRF rejection append one `AuditEvent` each. The action names are `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `AUTHORIZATION_DENIED`, `OBJECT_AUTHORIZATION_DENIED`, and `CSRF_REJECTED`. Failed login stores no actor and no submitted identifier. The other events use the server-resolved user id. `target_type` and `target_id` stay empty because those events do not name an approved business target. Details are only `role`, `object`, or the matched route for CSRF rejection. Rate-limit rejections are not audit rows. A failed audit write does not turn a denial into success. If the login audit row cannot be stored, the new session is revoked and the response is an error. Logout still revokes the session. There is no audit-history API.
 
+Order creation and submission live in the API domain module. A Store Manager creates a `Draft` only for an outlet assigned in `user_outlets`. Brand, district, and depot are read from that outlet. A supplied context value must match the outlet. Submission moves `Draft` to `Submitted` and sets `submitted_at` from the server clock. It does not allocate a trip, calculate cutoff eligibility, or add `dispatch_date`. The server actor is `created_by_user_id`. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
