@@ -192,7 +192,7 @@ Competition CSV values are source inputs. A stored source-backed row represents 
 
 Planning may read source-backed data later. A planning run does not update Outlet, Vehicle, `calendar_source`, `district_travel_source`, `service_allowance_source`, `traffic_speed_source`, or `road_conditions_source`. Planning outputs stay on operational records. The planning engine is not implemented in this section.
 
-No normal UI edit policy is defined for imported source fields. The importer inserts a new source identity and leaves an existing conflicting row unchanged. That is not an approval to edit source fields in the UI.
+Imported competition source records are read-only through the WayLoom application unless a future approved requirement explicitly authorizes editing. Corrections to source values occur through the authoritative source dataset and import process. Imports must not silently overwrite conflicting persisted source values.
 
 ### Competition datasets
 

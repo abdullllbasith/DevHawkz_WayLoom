@@ -498,6 +498,8 @@ When `traffic_speed.csv` or `road_conditions.csv` is absent, Hackathon startup a
 
 Optional datasets must remain explicitly optional unless the blueprint makes them mandatory.
 
+Imported competition source records are read-only through the WayLoom application unless a future approved requirement explicitly authorizes editing. Corrections to source values occur through the authoritative source dataset and import process. Imports must not silently overwrite conflicting persisted source values.
+
 Datathon-only training/test/submission data must remain isolated from Hackathon runtime data.
 
 Do not publish, upload, or expose confidential competition datasets.
