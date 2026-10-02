@@ -27,6 +27,7 @@ model User {
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   drivenVehicles  Vehicle[]
+  createdOrders   Order[]
 
   @@map("users")
 }
@@ -90,6 +91,7 @@ model Outlet {
   windowCloseTime    DateTime?          @map("window_close_time") @db.Time(0)
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  orders             Order[]
 
   @@map("outlets")
 }
@@ -113,4 +115,50 @@ model Vehicle {
 
   @@index([driverUserId])
   @@map("vehicles")
+}
+
+enum OrderStatus {
+  DRAFT               @map("Draft")
+  SUBMITTED           @map("Submitted")
+  CONFIRMED           @map("Confirmed")
+  DEFERRED            @map("Deferred")
+  PLANNED_ALLOCATED   @map("Planned / Allocated")
+  LOADING             @map("Loading")
+  EXCEPTION_REPORTED  @map("Exception Reported")
+  LOADED              @map("Loaded")
+  DISPATCHED          @map("Dispatched")
+  DELIVERED           @map("Delivered")
+  RECEIPT_CONFIRMED   @map("Receipt Confirmed")
+
+  @@map("order_status")
+}
+
+enum OrderTemperatureRequirement {
+  chilled
+  ambient
+
+  @@map("order_temperature_requirement")
+}
+
+/// One logical order. Brand, district, and depot stay on Outlet. No trip or receipt fields.
+model Order {
+  id               String                      @id @default(uuid()) @db.Uuid
+  deliveryId       String                      @unique @map("delivery_id")
+  orderDate        DateTime                    @map("order_date") @db.Date
+  outletId         String                      @map("outlet_id") @db.Uuid
+  outlet           Outlet                      @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  createdByUserId  String                      @map("created_by_user_id") @db.Uuid
+  createdBy        User                        @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  status           OrderStatus
+  tempRequirement  OrderTemperatureRequirement @map("temp_requirement")
+  orderUnits       Int                         @map("order_units")
+  orderWeightKg    Decimal                     @map("order_weight_kg")
+  orderVolumeM3    Decimal                     @map("order_volume_m3")
+  submittedAt      DateTime?                   @map("submitted_at") @db.Timestamptz(3)
+  createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([outletId])
+  @@index([createdByUserId])
+  @@map("orders")
 }
