@@ -16,7 +16,7 @@ enum OperationalRole {
   @@map("operational_role")
 }
 
-/// Identity record only. Login, sessions, and password hashing are not implemented here.
+/// Identity record. Login is not implemented on this model.
 model User {
   id              String          @id @default(uuid()) @db.Uuid
   loginIdentifier String          @unique @map("login_identifier")
@@ -26,6 +26,7 @@ model User {
   passwordHash    String          @map("password_hash")
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions         Session[]
   drivenVehicles   Vehicle[]
   createdOrders    Order[]
   loadingRecords    LoadingRecord[]   @relation("LoadingLoader")
@@ -36,6 +37,21 @@ model User {
   auditEvents       AuditEvent[]
 
   @@map("users")
+}
+
+/// Server-managed session. The raw session identifier is not stored.
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sessionTokenHash String    @unique @map("session_token_hash")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdAt        DateTime  @map("created_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  lastSeenAt       DateTime  @map("last_seen_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 enum Depot {

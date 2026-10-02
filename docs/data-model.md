@@ -253,7 +253,7 @@ The Phase 5 normalized planning object that would carry the travel and service i
 
 Authentication stays server-managed. The browser receives only an opaque session identifier in the server-managed authentication cookie. That raw identifier is not stored in PostgreSQL. The database stores only a cryptographic hash of it. Authentication tokens are not stored in `localStorage` or `IndexedDB`. JWT and localStorage authentication are not used.
 
-This representation is not implemented yet. It does not define login, cookies, middleware, or role checks.
+This representation is implemented by the server session module. It does not define login, middleware, or role checks.
 
 PostgreSQL table `sessions`:
 
@@ -271,4 +271,4 @@ A session with `revoked_at` set, or a session past `expires_at`, must not authen
 
 The server session lifetime is exactly 12 hours from `created_at`. `expires_at` is `created_at` plus 12 hours. `last_seen_at` does not extend `expires_at`. The session cookie `Max-Age` is 43200 seconds, the same 12 hours. After `expires_at`, the server rejects the session even if the browser still sends the cookie.
 
-The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace the later CSRF protection for cookie-authenticated state-changing requests.
+The session cookie name is `wayloom_session`. It is `HttpOnly`, `Path=/`, and `Secure` when the API runs in production. The cookie value is the opaque session identifier. The server stores only the SHA-256 hash of that identifier. The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace the later CSRF protection for cookie-authenticated state-changing requests.
