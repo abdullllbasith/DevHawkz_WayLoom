@@ -33,6 +33,7 @@ model User {
   capturedProofs    ProofOfDelivery[] @relation("ProofCapturer")
   reportedExceptions Exception[]      @relation("ExceptionReporter")
   receipts          Receipt[]         @relation("ReceiptStoreManager")
+  auditEvents       AuditEvent[]
 
   @@map("users")
 }
@@ -332,4 +333,64 @@ model Receipt {
 
   @@index([storeManagerUserId])
   @@map("receipts")
+}
+
+/// Approved offline event types. Local states such as Pending Sync are not server values.
+enum SyncEventType {
+  DELIVERY_OUTCOME  @map("delivery outcome")
+  PROOF_OF_DELIVERY @map("proof of delivery")
+
+  @@map("sync_event_type")
+}
+
+/// Domain record named by a sync or audit reference. This is not a foreign key.
+enum EventTargetType {
+  Order
+  Trip
+  TripStop
+  LoadingRecord
+  DeliveryRecord
+  ProofOfDelivery
+  Deferral
+  Exception
+  Receipt
+
+  @@map("event_target_type")
+}
+
+/// Server reconciliation record. The payload is not stored because its contents are not approved.
+model SyncEvent {
+  id                String          @id @default(uuid()) @db.Uuid
+  clientEventId     String          @unique @map("client_event_id")
+  eventType         SyncEventType   @map("event_type")
+  targetType        EventTargetType @map("target_type")
+  targetId          String          @map("target_id") @db.Uuid
+  clientCreatedAt   DateTime        @map("client_created_at") @db.Timestamptz(3)
+  receivedAt        DateTime        @map("received_at") @db.Timestamptz(3)
+  errorCode         String?         @map("error_code")
+  errorMessage      String?         @map("error_message")
+  lastAttemptAt     DateTime?       @map("last_attempt_at") @db.Timestamptz(3)
+  attemptCount      Int?            @map("attempt_count")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([targetType, targetId])
+  @@map("sync_events")
+}
+
+/// Historical security or domain action. No updated timestamp: later tasks own immutability.
+model AuditEvent {
+  id           String           @id @default(uuid()) @db.Uuid
+  action       String
+  occurredAt   DateTime         @map("occurred_at") @db.Timestamptz(3)
+  actorUserId  String?          @map("actor_user_id") @db.Uuid
+  actor        User?            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  targetType   EventTargetType? @map("target_type")
+  targetId     String?          @map("target_id") @db.Uuid
+  details      String?
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([actorUserId])
+  @@index([targetType, targetId])
+  @@map("audit_events")
 }
