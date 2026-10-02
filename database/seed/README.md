@@ -11,7 +11,7 @@ Development login identifiers:
 - `seed.driver`
 - `seed.store-manager`
 
-The development password for each of those users is `wayloom-dev-only`. The database stores an Argon2id hash. The password is not a production credential.
+The development password for each of those users is `wayloom-dev-only`. The database stores an Argon2id hash produced by the server password module. Each new hash has its own salt. The password is not a production credential.
 
 The seed assigns application driver `seed.driver` to competition vehicle `VEH001`. It does not change vehicle source fields. The order uses competition outlet `OUT001`, operating calendar date `2026-06-02`, and delivery identifier `SEED-2026-06-02-OUT001`. That delivery identifier is a development seed identifier. It does not define the production delivery-id format.
 

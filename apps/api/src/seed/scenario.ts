@@ -1,20 +1,11 @@
-import { hash, verify, Algorithm } from "@node-rs/argon2";
+import { hashPassword, verifyPassword } from "../security/password.js";
 
 export const SEED_PASSWORD = "wayloom-dev-only";
-export const SEED_PASSWORD_SALT = Buffer.from("wayloomseed00001");
 export const SEED_OUTLET_ID = "OUT001";
 export const SEED_VEHICLE_ID = "VEH001";
 export const SEED_ORDER_DATE = "2026-06-02";
 export const SEED_DELIVERY_ID = "SEED-2026-06-02-OUT001";
 export const SEED_SUBMITTED_AT = "2026-06-01T08:00:00.000Z";
-
-const hashOptions = {
-  algorithm: Algorithm.Argon2id,
-  memoryCost: 19456,
-  timeCost: 2,
-  parallelism: 1,
-  salt: SEED_PASSWORD_SALT,
-};
 
 export const seedUsers = [
   {
@@ -62,11 +53,11 @@ export function seedOrderDate(): Date {
 }
 
 export function hashSeedPassword(): Promise<string> {
-  return hash(SEED_PASSWORD, hashOptions);
+  return hashPassword(SEED_PASSWORD);
 }
 
 export function seedPasswordMatches(passwordHash: string): Promise<boolean> {
-  return verify(passwordHash, SEED_PASSWORD);
+  return verifyPassword(passwordHash, SEED_PASSWORD);
 }
 
 export function sameSeedOrder(existing: {
