@@ -1,4 +1,5 @@
 import { authorizeDispatcherOperational, authorizeStoreManagerOutlet } from "../security/object-authorization.js";
+import { transitionOrder } from "./order-transition.js";
 
 export const orderStatuses = [
   "DRAFT",
@@ -50,10 +51,18 @@ export type StoredOrder = {
   submittedAt: Date | null;
 };
 
+export type OrderTransitionFacts = {
+  tripStopCount: number;
+  deferralCount: number;
+  loaderUserIds: readonly string[];
+  deliveryDriverUserIds: readonly string[];
+};
+
 export type OrderStore = {
   findOutletById(id: string): Promise<OrderOutlet | null>;
   findByDeliveryId(deliveryId: string): Promise<StoredOrder | null>;
   findById(id: string): Promise<StoredOrder | null>;
+  findTransitionFacts(orderId: string): Promise<OrderTransitionFacts>;
   create(input: {
     deliveryId: string;
     orderDate: string;
@@ -64,14 +73,23 @@ export type OrderStore = {
     orderWeightKg: string;
     orderVolumeM3: string;
   }): Promise<StoredOrder>;
-  markSubmitted(id: string, submittedAt: Date): Promise<StoredOrder>;
+  compareAndSetStatus(input: {
+    id: string;
+    expected: OrderStatusName;
+    next: OrderStatusName;
+    submittedAt: Date | null;
+  }): Promise<StoredOrder | null>;
 };
 
 export type OrderDomainCode =
   | "invalid_input"
   | "not_found"
   | "authorization_failure"
+  | "object_scope_failure"
+  | "invalid_transition"
   | "lifecycle_conflict"
+  | "prerequisite_missing"
+  | "concurrency_conflict"
   | "invariant_violation"
   | "persistence_failure";
 
@@ -162,15 +180,20 @@ export async function submitOrder(input: {
   if (!canMutateOutlet(input.actor, order.outletId)) {
     return failure("authorization_failure");
   }
-  if (order.status !== "DRAFT") {
+  const submitted = await transitionOrder({
+    actor: input.actor,
+    orderId: input.orderId,
+    to: "SUBMITTED",
+    now: input.now,
+    store: input.store,
+  });
+  if (!submitted.ok && submitted.code === "object_scope_failure") {
+    return failure("authorization_failure");
+  }
+  if (!submitted.ok && submitted.code === "invalid_transition") {
     return failure("lifecycle_conflict");
   }
-  try {
-    const submitted = await input.store.markSubmitted(input.orderId, input.now);
-    return { ok: true, order: submitted };
-  } catch {
-    return failure("persistence_failure");
-  }
+  return submitted;
 }
 
 export async function getOrder(input: {

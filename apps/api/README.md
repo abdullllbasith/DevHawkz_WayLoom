@@ -34,6 +34,8 @@ Successful login, failed login, logout, role denial, object denial, and CSRF rej
 
 Order creation and submission live in the API domain module. A Store Manager creates a `Draft` only for an outlet assigned in `user_outlets`. Brand, district, and depot are read from that outlet. A supplied context value must match the outlet. Submission moves `Draft` to `Submitted` and sets `submitted_at` from the server clock. It does not allocate a trip, calculate cutoff eligibility, or add `dispatch_date`. The server actor is `created_by_user_id`. No business audit action name is approved, so these writes do not invent one.
 
+Later order status changes use that same transition boundary. The path is `Submitted` to `Confirmed`, then `Deferred` or `Planned / Allocated`, then `Loading`, `Loaded`, `Dispatched`, `Delivered`, and `Receipt Confirmed`. `Loading` may enter `Exception Reported`. Dispatcher operational checks own confirmation, deferral, allocation, dispatch, and exception reporting. A loader step requires that loader's loading record. Delivery requires that driver's delivery record. `Planned / Allocated` requires an existing trip stop and does not calculate capacity, fuel, windows, or cutoff. `Deferred` requires a deferral row and no trip stop. Receipt confirmation requires `Delivered` and an existing delivery record. The status write matches the previously read status, so a stale competing write does not also succeed.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.

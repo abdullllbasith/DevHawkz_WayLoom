@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { getPrismaClient } from "../db.js";
+import { prismaOrderStore } from "../domain/order-store.js";
+import { transitionOrder } from "../domain/order-transition.js";
 import { assertImportDatabaseTarget } from "../import/database-target.js";
 import {
   hashSeedPassword,
@@ -132,14 +134,28 @@ try {
           orderDate: seedOrderDate(),
           outletId: outlet.id,
           createdByUserId: storeManager.id,
-          status: seedOrder.status,
+          status: "DRAFT",
           tempRequirement: seedOrder.tempRequirement,
           orderUnits: seedOrder.orderUnits,
           orderWeightKg: seedOrder.orderWeightKg,
           orderVolumeM3: seedOrder.orderVolumeM3,
-          submittedAt: new Date(seedOrder.submittedAt),
+          submittedAt: null,
         },
       });
+      const submitted = await transitionOrder({
+        actor: {
+          userId: storeManager.id,
+          role: storeManager.role,
+          assignedOutletIds: [outlet.id],
+        },
+        orderId: seedOrder.id,
+        to: "SUBMITTED",
+        now: new Date(seedOrder.submittedAt),
+        store: prismaOrderStore(transaction),
+      });
+      if (!submitted.ok) {
+        throw new Error("Seed order submission was rejected. No records were written.");
+      }
       ordersInserted = 1;
     } else if (
       sameSeedOrder({

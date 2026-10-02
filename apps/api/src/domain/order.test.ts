@@ -4,7 +4,16 @@ import { dirname, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { createOrder, getOrder, submitOrder, type OrderActor, type OrderOutlet, type OrderStore, type StoredOrder } from "./order.js";
+import {
+  createOrder,
+  getOrder,
+  submitOrder,
+  type OrderActor,
+  type OrderOutlet,
+  type OrderStore,
+  type OrderTransitionFacts,
+  type StoredOrder,
+} from "./order.js";
 
 const now = new Date("2026-06-01T08:00:00.000Z");
 const managerId = "44444444-4444-4444-8444-444444444444";
@@ -219,6 +228,9 @@ function memoryStore(): OrderStore & { orders: StoredOrder[]; outlets: OrderOutl
     async findById(id) {
       return orders.find((order) => order.id === id) ?? null;
     },
+    async findTransitionFacts() {
+      return emptyFacts();
+    },
     async create(input) {
       const outlet = outlets.find((item) => item.id === input.outletId);
       if (outlet === undefined) {
@@ -244,14 +256,20 @@ function memoryStore(): OrderStore & { orders: StoredOrder[]; outlets: OrderOutl
       orders.push(order);
       return order;
     },
-    async markSubmitted(id, submittedAt) {
-      const order = orders.find((item) => item.id === id);
-      if (order === undefined) {
-        throw new Error("missing order");
+    async compareAndSetStatus(input) {
+      const order = orders.find((item) => item.id === input.id);
+      if (order === undefined || order.status !== input.expected) {
+        return null;
       }
-      order.status = "SUBMITTED";
-      order.submittedAt = submittedAt;
+      if (input.next === "SUBMITTED") {
+        order.submittedAt = input.submittedAt;
+      }
+      order.status = input.next;
       return order;
     },
   };
+}
+
+function emptyFacts(): OrderTransitionFacts {
+  return { tripStopCount: 0, deferralCount: 0, loaderUserIds: [], deliveryDriverUserIds: [] };
 }
