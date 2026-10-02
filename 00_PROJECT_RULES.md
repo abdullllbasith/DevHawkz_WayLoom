@@ -416,7 +416,7 @@ Approved authentication architecture:
 - secure cookies
 - appropriate `HttpOnly`
 - `Secure` in production
-- appropriate `SameSite`
+- `SameSite=Strict`
 - server-side session records
 - session expiry/revocation
 - Argon2id password hashing
