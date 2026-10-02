@@ -13,8 +13,9 @@
     "prisma:status": "node scripts/prisma-database.mjs status",
     "prisma:check": "node scripts/prisma-database.mjs check",
     "prisma:reset-test": "node scripts/prisma-database.mjs reset-test test",
-    "test": "node --test dist/import/competition-import.test.js",
-    "import:competition": "node dist/import/cli.js"
+    "test": "node --test dist/import/competition-import.test.js dist/import/outlets.test.js",
+    "import:competition": "node dist/import/cli.js",
+    "import:outlets": "node dist/import/outlets-cli.js"
   },
   "devDependencies": {
     "@types/node": "24.19.0",

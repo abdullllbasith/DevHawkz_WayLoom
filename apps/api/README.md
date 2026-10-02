@@ -46,7 +46,9 @@ npm run prisma:reset-test
 
 ## Competition import
 
-`npm run import:competition --workspace @wayloom/api` checks the local development database, then looks for `outlets.csv`, `vehicles.csv`, and `calendar.csv` in `data/competition-import`. A missing file stops the command before any write. Outlet, vehicle, and calendar column mapping is not implemented here. The command refuses production and does not print database URLs.
+`npm run import:competition --workspace @wayloom/api` checks the local development database, then looks for `outlets.csv`, `vehicles.csv`, and `calendar.csv` in `data/competition-import`. A missing file stops the command before any write. The command refuses production and does not print database URLs.
+
+`npm run import:outlets --workspace @wayloom/api` imports `outlets.csv` into the Outlet table. A validation failure writes nothing. Vehicle and calendar files are not imported by that command.
 
 ## Errors
 
