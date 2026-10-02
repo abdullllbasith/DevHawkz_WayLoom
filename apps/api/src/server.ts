@@ -28,6 +28,7 @@ function start(config: ApiConfig): void {
       sessions: prismaSessionStore(prisma),
       assignedOutletIds: (userId) => assignedOutletIds(prisma, userId),
       loginRateLimit: createLoginRateLimiter(config.loginRateLimit),
+      httpSecurity: config.httpSecurity,
     }),
   );
   let closing = false;

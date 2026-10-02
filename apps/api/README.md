@@ -28,6 +28,8 @@ In development and test, `API_HOST` defaults to `127.0.0.1` and `API_PORT` defau
 
 `GET /health` reports that this process is up. It does not check PostgreSQL or the planning service. A readiness endpoint is not exposed until those dependencies exist.
 
+The API allows credentialed browser calls only from `WEB_ORIGIN`. Development and test use `http://127.0.0.1:3000` when it is omitted. Production omits CORS headers until `WEB_ORIGIN` is an https origin, and that origin cannot be a local address. The request `Origin` is never copied into the response. Allowed methods are `GET` and `POST`. Allowed request headers are `content-type` and `x-wayloom-csrf`. A matching preflight returns `204` and does not run login, CSRF, or a business route. `WEB_HTTPS=true` adds HSTS only in production, without `includeSubDomains` or `preload`. `/api` responses use `Cache-Control: no-store`. The planning service is not a browser client and has no CORS policy.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.

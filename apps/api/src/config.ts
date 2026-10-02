@@ -1,4 +1,9 @@
 import { assertRuntimeDatabaseUrl } from "./runtime-database.js";
+import {
+  parseBrowserOrigin,
+  parseHttpsEnabled,
+  type HttpSecurityConfig,
+} from "./security/http-security.js";
 import { parseLoginRateLimit, type LoginRateLimitConfig } from "./security/login-rate-limit.js";
 
 export type NodeEnvironment = "development" | "test" | "production";
@@ -11,6 +16,7 @@ export type ApiConfig = {
   port: number;
   logLevel: LogLevel;
   loginRateLimit: LoginRateLimitConfig;
+  httpSecurity: HttpSecurityConfig;
 };
 
 const nodeEnvironments: readonly NodeEnvironment[] = [
@@ -33,6 +39,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     port: parsePort(env.API_PORT, nodeEnv),
     logLevel: parseLogLevel(env.LOG_LEVEL),
     loginRateLimit: parseLoginRateLimit(env, nodeEnv),
+    httpSecurity: {
+      browserOrigin: parseBrowserOrigin(env.WEB_ORIGIN, nodeEnv),
+      httpsEnabled: parseHttpsEnabled(env.WEB_HTTPS, nodeEnv),
+    },
   };
 }
 

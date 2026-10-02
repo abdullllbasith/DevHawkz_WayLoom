@@ -10,6 +10,12 @@ import {
 } from "./security/api-boundary.js";
 import { currentUser, login, logout, type UserDirectory } from "./security/auth.js";
 import { createCsrfToken, csrfTokenMatches } from "./security/csrf.js";
+import {
+  applySecurityHeaders,
+  corsResponseHeaders,
+  securityHeaders,
+  type HttpSecurityConfig,
+} from "./security/http-security.js";
 import { clientAddress, createLoginRateLimiter, type LoginRateLimiter } from "./security/login-rate-limit.js";
 import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
 
@@ -22,6 +28,7 @@ export type AppOptions = {
   assignedOutletIds?: OutletAssignmentLookup;
   businessRoutes?: readonly BusinessRoute[];
   loginRateLimit?: LoginRateLimiter;
+  httpSecurity?: HttpSecurityConfig;
 };
 
 export function createApp(options: AppOptions) {
@@ -37,6 +44,28 @@ export function createApp(options: AppOptions) {
     try {
       const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
       const method = request.method ?? "GET";
+      const httpSecurity = options.httpSecurity ?? { browserOrigin: null, httpsEnabled: false };
+      applySecurityHeaders(
+        response,
+        securityHeaders({
+          nodeEnv: options.nodeEnv,
+          httpsEnabled: httpSecurity.httpsEnabled,
+          pathname,
+        }),
+      );
+      const corsHeaders = corsResponseHeaders(request, httpSecurity.browserOrigin);
+      if (corsHeaders !== null) {
+        for (const [name, value] of Object.entries(corsHeaders)) {
+          response.setHeader(name, value);
+        }
+      }
+      if (method === "OPTIONS") {
+        if (corsHeaders !== null) {
+          response.writeHead(204);
+          response.end();
+          return;
+        }
+      }
       const businessRoute = businessRoutes.find((route) => route.method === method && route.path === pathname);
       if (businessRoute) {
         await enforceBusinessRoute({
