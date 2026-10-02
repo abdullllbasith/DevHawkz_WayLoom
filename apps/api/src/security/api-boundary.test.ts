@@ -17,6 +17,7 @@ import {
   type BusinessRoute,
   type RequestSecurityContext,
 } from "./api-boundary.js";
+import { createCsrfToken } from "./csrf.js";
 import { authorizeStoreManagerOutlet } from "./object-authorization.js";
 import { createAuthenticatedSession, type SessionRecord, type SessionStore } from "./session.js";
 
@@ -34,12 +35,13 @@ test("public and session routes stay explicit", () => {
   ]);
   assert.deepEqual(sessionRoutes.map((route) => `${route.method} ${route.path}`), [
     "GET /api/auth/me",
+    "GET /api/auth/csrf",
     "POST /api/auth/logout",
   ]);
   assert.equal(isPublicRoute("GET", "/health"), true);
   assert.equal(isSessionRoute("POST", "/api/auth/logout"), true);
   assert.equal(isPublicRoute("POST", "/api/auth/logout"), false);
-  assert.deepEqual(securityPipeline, ["authenticate", "authorizeRole", "authorizeObject", "business"]);
+  assert.deepEqual(securityPipeline, ["authenticate", "csrf", "authorizeRole", "authorizeObject", "business"]);
   assert.throws(() =>
     defineBusinessRoute({
       method: "GET",
@@ -102,14 +104,15 @@ test("a business route authenticates, checks role and object, then runs", async 
     const loaderCookie = await cookieFor(loader, sessions);
     const wrongRole = await fetch(url(server, "/api/orders/scope?outletId=" + outletA), {
       method: "POST",
-      headers: { cookie: loaderCookie, "x-role": "STORE_MANAGER" },
+      headers: { cookie: loaderCookie, "x-role": "STORE_MANAGER", "x-wayloom-csrf": csrfFor(loaderCookie) },
     });
     assert.equal(wrongRole.status, 403);
+    assert.deepEqual(await wrongRole.json(), { error: { code: "forbidden", message: "Forbidden." } });
     assert.equal(handled, false);
     const managerCookie = await cookieFor(storeManager, sessions);
     const outside = await fetch(url(server, "/api/orders/scope?outletId=" + outletA), {
       method: "POST",
-      headers: { cookie: managerCookie, "x-outlet-id": outletA },
+      headers: { cookie: managerCookie, "x-outlet-id": outletA, "x-wayloom-csrf": csrfFor(managerCookie) },
     });
     assert.equal(outside.status, 404);
     assert.equal(handled, false);
@@ -117,20 +120,24 @@ test("a business route authenticates, checks role and object, then runs", async 
     steps.length = 0;
     const allowed = await fetch(url(server, "/api/orders/scope?outletId=" + outletB), {
       method: "POST",
-      headers: { cookie: managerCookie, "x-role": "DISPATCHER" },
+      headers: { cookie: managerCookie, "x-role": "DISPATCHER", "x-wayloom-csrf": csrfFor(managerCookie) },
     });
     assert.equal(allowed.status, 200);
     assert.equal(handled, true);
     assert.deepEqual(steps, ["object", "business"]);
     const logout = await fetch(url(server, "/api/auth/logout"), {
       method: "POST",
-      headers: { cookie: loaderCookie },
+      headers: { cookie: loaderCookie, "x-wayloom-csrf": csrfFor(loaderCookie) },
     });
     assert.equal(logout.status, 200);
   } finally {
     await close(server);
   }
 });
+
+function csrfFor(cookie: string): string {
+  return createCsrfToken(cookie.split("=")[1] ?? "");
+}
 
 function user(id: string, loginIdentifier: string, role: AuthUserRecord["role"]): AuthUserRecord {
   return { id, loginIdentifier, displayName: loginIdentifier, role, active: true, passwordHash: "not-used" };

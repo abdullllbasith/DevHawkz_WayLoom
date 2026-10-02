@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { createApp } from "../app.js";
 import type { Logger } from "../log.js";
+import { createCsrfToken } from "./csrf.js";
 import { hashPassword } from "./password.js";
 import type { AuthUserRecord, UserDirectory } from "./auth.js";
 import { SESSION_LIFETIME_MS, type SessionRecord, type SessionStore } from "./session.js";
@@ -50,13 +51,12 @@ test("an active user receives a session cookie and can read the current user", a
     const loginBody = await loginResponse.text();
     const setCookie = loginResponse.headers.getSetCookie()[0] ?? "";
     assert.equal(loginResponse.status, 200);
-    assert.deepEqual(JSON.parse(loginBody), {
-      user: {
-        id: activeUser.id,
-        loginIdentifier: activeUser.loginIdentifier,
-        displayName: activeUser.displayName,
-        role: activeUser.role,
-      },
+    const parsedLogin = JSON.parse(loginBody) as { user: { id: string }; csrfToken: string };
+    assert.deepEqual(parsedLogin.user, {
+      id: activeUser.id,
+      loginIdentifier: activeUser.loginIdentifier,
+      displayName: activeUser.displayName,
+      role: activeUser.role,
     });
     assert.equal(loginBody.includes(password), false);
     assert.equal(loginBody.includes(passwordHash), false);
@@ -67,6 +67,8 @@ test("an active user receives a session cookie and can read the current user", a
     assert.match(setCookie, /Max-Age=43200/);
     assert.equal(setCookie.includes("Secure"), false);
     const token = setCookie.split(";")[0]?.split("=")[1] ?? "";
+    assert.equal(parsedLogin.csrfToken, createCsrfToken(token));
+    assert.notEqual(parsedLogin.csrfToken, token);
     assert.equal(loginBody.includes(token), false);
     assert.equal(logs.some((line) => line.includes(password) || line.includes(token)), false);
     assert.equal(sessions.rows[0]?.sessionTokenHash === token, false);
@@ -74,7 +76,7 @@ test("an active user receives a session cookie and can read the current user", a
       headers: { cookie: `wayloom_session=${token}` },
     });
     assert.equal(me.status, 200);
-    assert.deepEqual(await me.json(), JSON.parse(loginBody));
+    assert.deepEqual(await me.json(), { user: parsedLogin.user });
   } finally {
     await close(server);
   }
@@ -174,7 +176,7 @@ test("logout revokes the session, clears the cookie, and can be repeated", async
     const cookie = `wayloom_session=${token}`;
     const first = await fetch(url(server, "/api/auth/logout"), {
       method: "POST",
-      headers: { cookie },
+      headers: { cookie, "x-wayloom-csrf": createCsrfToken(token) },
     });
     const cleared = first.headers.getSetCookie()[0] ?? "";
     assert.equal(first.status, 200);

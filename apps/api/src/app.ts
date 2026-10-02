@@ -9,7 +9,8 @@ import {
   type OutletAssignmentLookup,
 } from "./security/api-boundary.js";
 import { currentUser, login, logout, type UserDirectory } from "./security/auth.js";
-import type { SessionStore } from "./security/session.js";
+import { createCsrfToken, csrfTokenMatches } from "./security/csrf.js";
+import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
 
 export type AppOptions = {
   nodeEnv: NodeEnvironment;
@@ -38,6 +39,7 @@ export function createApp(options: AppOptions) {
         await enforceBusinessRoute({
           response,
           cookieHeader: headerValue(request.headers.cookie),
+          csrfHeader: headerValue(request.headers["x-wayloom-csrf"]),
           users: options.users,
           sessions: options.sessions,
           now: now(),
@@ -76,7 +78,32 @@ export function createApp(options: AppOptions) {
           sendError(response, 401, "authentication_failed", "Authentication failed.");
           return;
         }
-        sendJson(response, 200, { user: result.user }, { "set-cookie": result.cookie });
+        const sessionToken = readSessionToken(result.cookie);
+        sendJson(
+          response,
+          200,
+          { user: result.user, csrfToken: sessionToken === null ? undefined : createCsrfToken(sessionToken) },
+          { "set-cookie": result.cookie },
+        );
+        return;
+      }
+      if (pathname === "/api/auth/csrf") {
+        if (request.method !== "GET") {
+          sendError(response, 405, "method_not_allowed", "Method not allowed.");
+          return;
+        }
+        const cookieHeader = headerValue(request.headers.cookie);
+        const sessionToken = readSessionToken(cookieHeader);
+        const session = await resolveAuthenticatedSession({
+          cookieHeader,
+          now: now(),
+          store: options.sessions,
+        });
+        if (session === null || sessionToken === null) {
+          sendError(response, 401, "authentication_required", "Authentication required.");
+          return;
+        }
+        sendJson(response, 200, { csrfToken: createCsrfToken(sessionToken) });
         return;
       }
       if (pathname === "/api/auth/me") {
@@ -102,8 +129,19 @@ export function createApp(options: AppOptions) {
           sendError(response, 405, "method_not_allowed", "Method not allowed.");
           return;
         }
+        const cookieHeader = headerValue(request.headers.cookie);
+        const sessionToken = readSessionToken(cookieHeader);
+        const session = await resolveAuthenticatedSession({
+          cookieHeader,
+          now: now(),
+          store: options.sessions,
+        });
+        if (session !== null && sessionToken !== null && !csrfTokenMatches(sessionToken, headerValue(request.headers["x-wayloom-csrf"]))) {
+          sendError(response, 403, "csrf_invalid", "CSRF validation failed.");
+          return;
+        }
         const result = await logout({
-          cookieHeader: headerValue(request.headers.cookie),
+          cookieHeader,
           sessions: options.sessions,
           now: now(),
           nodeEnv: options.nodeEnv,

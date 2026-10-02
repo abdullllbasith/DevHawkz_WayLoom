@@ -271,7 +271,9 @@ A session with `revoked_at` set, or a session past `expires_at`, must not authen
 
 The server session lifetime is exactly 12 hours from `created_at`. `expires_at` is `created_at` plus 12 hours. `last_seen_at` does not extend `expires_at`. The session cookie `Max-Age` is 43200 seconds, the same 12 hours. After `expires_at`, the server rejects the session even if the browser still sends the cookie.
 
-The session cookie name is `wayloom_session`. It is `HttpOnly`, `Path=/`, and `Secure` when the API runs in production. The cookie value is the opaque session identifier. The server stores only the SHA-256 hash of that identifier. The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace the later CSRF protection for cookie-authenticated state-changing requests.
+The session cookie name is `wayloom_session`. It is `HttpOnly`, `Path=/`, and `Secure` when the API runs in production. The cookie value is the opaque session identifier. The server stores only the SHA-256 hash of that identifier. The session cookie `SameSite` value is `Strict`. `SameSite=Strict` does not replace CSRF protection.
+
+Cookie-authenticated `POST`, `PUT`, `PATCH`, and `DELETE` requests must send the header `x-wayloom-csrf`. The value is the HMAC-SHA256 of the raw session identifier, not the identifier itself, and it is not stored. `GET` does not require it. Login remains public and returns the token for the new session. `GET /api/auth/csrf` returns it for the current session. Logout revokes a live session only when the header matches that session. A logout with no live session still clears the cookie. The token is not written to `localStorage` or `IndexedDB`. The API does not send a CORS policy.
 
 ## Store Manager outlet authorization
 

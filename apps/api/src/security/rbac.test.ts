@@ -7,6 +7,7 @@ import { createApp } from "../app.js";
 import { sendJson } from "../errors.js";
 import type { Logger } from "../log.js";
 import type { AuthUserRecord, UserDirectory } from "./auth.js";
+import { createCsrfToken } from "./csrf.js";
 import { requireRole, type OperationalRoleName } from "./rbac.js";
 import {
   createAuthenticatedSession,
@@ -110,7 +111,10 @@ test("authorization runs before the protected operation and logout stays open", 
     assert.equal(users[1]?.role, "LOADER");
     const logout = await fetch(url(appServer, "/api/auth/logout"), {
       method: "POST",
-      headers: { cookie: loaderCookie },
+      headers: {
+        cookie: loaderCookie,
+        "x-wayloom-csrf": createCsrfToken(loaderCookie.split("=")[1] ?? ""),
+      },
     });
     assert.equal(logout.status, 200);
     assert.deepEqual(await logout.json(), { status: "ok" });

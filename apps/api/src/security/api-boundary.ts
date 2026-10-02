@@ -1,9 +1,10 @@
 import type { ServerResponse } from "node:http";
 import { sendError } from "../errors.js";
 import type { UserDirectory } from "./auth.js";
+import { csrfTokenMatches, isStateChangingMethod } from "./csrf.js";
 import type { ObjectDecision } from "./object-authorization.js";
 import { authorizeRole, type OperationalRoleName } from "./rbac.js";
-import type { SessionStore } from "./session.js";
+import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./session.js";
 
 export const publicRoutes = [
   { method: "GET", path: "/health" },
@@ -12,10 +13,11 @@ export const publicRoutes = [
 
 export const sessionRoutes = [
   { method: "GET", path: "/api/auth/me" },
+  { method: "GET", path: "/api/auth/csrf" },
   { method: "POST", path: "/api/auth/logout" },
 ] as const;
 
-export const securityPipeline = ["authenticate", "authorizeRole", "authorizeObject", "business"] as const;
+export const securityPipeline = ["authenticate", "csrf", "authorizeRole", "authorizeObject", "business"] as const;
 
 export type RequestSecurityContext = {
   userId: string;
@@ -26,7 +28,7 @@ export type RequestSecurityContext = {
 export type OutletAssignmentLookup = (userId: string) => Promise<readonly string[]>;
 
 export type BusinessRoute = {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   allowedRoles: readonly OperationalRoleName[];
   authorizeObject?: (context: RequestSecurityContext) => ObjectDecision | Promise<ObjectDecision>;
@@ -54,12 +56,27 @@ export function defineBusinessRoute(route: BusinessRoute): BusinessRoute {
 export async function enforceBusinessRoute(input: {
   response: ServerResponse;
   cookieHeader: string | undefined;
+  csrfHeader: string | undefined;
   users: UserDirectory;
   sessions: SessionStore;
   now: Date;
   assignedOutletIds: OutletAssignmentLookup;
   route: BusinessRoute;
 }): Promise<void> {
+  const sessionToken = readSessionToken(input.cookieHeader);
+  const session = await resolveAuthenticatedSession({
+    cookieHeader: input.cookieHeader,
+    now: input.now,
+    store: input.sessions,
+  });
+  if (session === null || sessionToken === null) {
+    sendError(input.response, 401, "authentication_required", "Authentication required.");
+    return;
+  }
+  if (isStateChangingMethod(input.route.method) && !csrfTokenMatches(sessionToken, input.csrfHeader)) {
+    sendError(input.response, 403, "csrf_invalid", "CSRF validation failed.");
+    return;
+  }
   const decision = await authorizeRole({
     cookieHeader: input.cookieHeader,
     users: input.users,
