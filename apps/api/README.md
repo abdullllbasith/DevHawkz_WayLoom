@@ -36,6 +36,8 @@ Order creation and submission live in the API domain module. A Store Manager cre
 
 Later order status changes use that same transition boundary. The path is `Submitted` to `Confirmed`, then `Deferred` or `Planned / Allocated`, then `Loading`, `Loaded`, `Dispatched`, `Delivered`, and `Receipt Confirmed`. `Loading` may enter `Exception Reported`. Dispatcher operational checks own confirmation, deferral, allocation, dispatch, and exception reporting. A loader step requires that loader's loading record. Delivery requires that driver's delivery record. `Planned / Allocated` requires an existing trip stop and does not calculate capacity, fuel, windows, or cutoff. `Deferred` requires a deferral row and no trip stop. Receipt confirmation requires `Delivered` and an existing delivery record. The status write matches the previously read status, so a stale competing write does not also succeed.
 
+A Dispatcher persists a trip from an allocation through the trip domain. The trip number is `1` or `2`, and the vehicle depot, one brand, one district, weight, volume, reefer capability, and van-only access are checked against the stored vehicle and orders. A supplied planned arrival must sit inside the outlet window when both bounds exist. The domain does not calculate fuel or trip minutes and does not store them. Each allocated order moves to `Planned / Allocated` through the order transition. Confirmation changes only the trip status. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
