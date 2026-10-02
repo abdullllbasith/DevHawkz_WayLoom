@@ -1,7 +1,10 @@
 import { createServer } from "node:http";
 import { createApp } from "./app.js";
 import { loadConfig, type ApiConfig } from "./config.js";
+import { getPrismaClient } from "./db.js";
 import { createLogger } from "./log.js";
+import { prismaSessionStore } from "./security/session-store.js";
+import { prismaUserDirectory } from "./security/user-directory.js";
 
 try {
   start(loadConfig());
@@ -14,10 +17,13 @@ try {
 
 function start(config: ApiConfig): void {
   const log = createLogger(config.logLevel);
+  const prisma = getPrismaClient();
   const server = createServer(
     createApp({
       nodeEnv: config.nodeEnv,
       log,
+      users: prismaUserDirectory(prisma),
+      sessions: prismaSessionStore(prisma),
     }),
   );
   let closing = false;

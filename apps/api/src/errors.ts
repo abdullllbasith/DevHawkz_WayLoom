@@ -13,11 +13,13 @@ export function sendJson(
   response: ServerResponse,
   statusCode: number,
   body: unknown,
+  headers?: Record<string, string>,
 ): void {
   const payload = JSON.stringify(body);
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
+    ...headers,
   });
   response.end(payload);
 }

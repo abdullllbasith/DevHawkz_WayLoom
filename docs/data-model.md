@@ -253,7 +253,7 @@ The Phase 5 normalized planning object that would carry the travel and service i
 
 Authentication stays server-managed. The browser receives only an opaque session identifier in the server-managed authentication cookie. That raw identifier is not stored in PostgreSQL. The database stores only a cryptographic hash of it. Authentication tokens are not stored in `localStorage` or `IndexedDB`. JWT and localStorage authentication are not used.
 
-This representation is implemented by the server session module. It does not define login, middleware, or role checks.
+This representation is implemented by the server session module. Login and logout use it. They do not define middleware or role checks.
 
 PostgreSQL table `sessions`:
 

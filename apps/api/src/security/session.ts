@@ -39,13 +39,15 @@ export function sessionExpiry(createdAt: Date): Date {
 }
 
 export function buildSessionCookie(token: string, nodeEnv: string): string {
-  const parts = [
-    `${SESSION_COOKIE_NAME}=${token}`,
-    "HttpOnly",
-    "SameSite=Strict",
-    "Path=/",
-    `Max-Age=${String(SESSION_COOKIE_MAX_AGE_SECONDS)}`,
-  ];
+  return sessionCookieHeader(`${SESSION_COOKIE_NAME}=${token}`, SESSION_COOKIE_MAX_AGE_SECONDS, nodeEnv);
+}
+
+export function clearSessionCookie(nodeEnv: string): string {
+  return sessionCookieHeader(`${SESSION_COOKIE_NAME}=`, 0, nodeEnv);
+}
+
+function sessionCookieHeader(pair: string, maxAge: number, nodeEnv: string): string {
+  const parts = [pair, "HttpOnly", "SameSite=Strict", "Path=/", `Max-Age=${String(maxAge)}`];
   if (nodeEnv === "production") {
     parts.push("Secure");
   }
