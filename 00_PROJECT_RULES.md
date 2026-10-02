@@ -477,6 +477,8 @@ Expected shared data includes:
 - `vehicles.csv`
 - `calendar.csv`
 
+`calendar.csv` is source-backed competition/master data. Its PostgreSQL persistence, source-date identity, and planning-input boundary are recorded in `docs/data-model.md`. That record resolves an architecture gap. It is not a Blueprint v1.4 specification.
+
 Hackathon planning may also use the approved additional operational datasets:
 
 - `district_travel.csv`

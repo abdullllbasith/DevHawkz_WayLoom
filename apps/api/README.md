@@ -52,6 +52,8 @@ npm run prisma:reset-test
 
 `npm run import:vehicles --workspace @wayloom/api` imports `vehicles.csv` into the Vehicle table. Driver assignment is not part of that file. A validation failure writes nothing.
 
+`npm run import:calendar --workspace @wayloom/api` imports `calendar.csv` into `calendar_source`. That table is competition source data. The source date is the row identity. A validation failure writes nothing.
+
 ## Errors
 
 Unexpected failures return JSON:

@@ -394,3 +394,21 @@ model AuditEvent {
   @@index([targetType, targetId])
   @@map("audit_events")
 }
+
+/// Competition calendar source rows. Not an application-domain entity. The source date is the identity.
+model CalendarSource {
+  date          DateTime @id @map("date") @db.Date
+  dow           Int
+  dowName       String   @map("dow_name")
+  isWeekend     Int      @map("is_weekend")
+  isoYear       Int      @map("iso_year")
+  isoWeek       Int      @map("iso_week")
+  isPayday      Int      @map("is_payday")
+  festival      String
+  festivalRamp  String   @map("festival_ramp")
+  isHoliday     Int      @map("is_holiday")
+  monsoon       Int
+  isOperating   Int      @map("is_operating")
+
+  @@map("calendar_source")
+}
