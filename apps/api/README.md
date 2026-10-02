@@ -38,6 +38,8 @@ Later order status changes use that same transition boundary. The path is `Submi
 
 A Dispatcher persists a trip from an allocation through the trip domain. The trip number is `1` or `2`, and the vehicle depot, one brand, one district, weight, volume, reefer capability, and van-only access are checked against the stored vehicle and orders. A supplied planned arrival must sit inside the outlet window when both bounds exist. The domain does not calculate fuel or trip minutes and does not store them. Each allocated order moves to `Planned / Allocated` through the order transition. Confirmation changes only the trip status. No business audit action name is approved, so these writes do not invent one.
 
+A Loader verifies one loading record for a confirmed trip stop. Expected units are copied from `order_units`. The order moves through `Loading` to `Loaded` on the order transition, and a shortfall is stored on that same record. The order quantity, weight, volume, and outlet context stay unchanged. A second verification or a second shortfall report conflicts. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
