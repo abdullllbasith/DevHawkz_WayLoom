@@ -26,6 +26,91 @@ model User {
   passwordHash    String          @map("password_hash")
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  drivenVehicles  Vehicle[]
 
   @@map("users")
+}
+
+enum Depot {
+  Peliyagoda
+  Kandy
+
+  @@map("depot")
+}
+
+enum OutletBrand {
+  Fresh
+  Style
+  Tech
+
+  @@map("outlet_brand")
+}
+
+enum DockType {
+  rear_dock
+  street
+  mall_bay
+
+  @@map("dock_type")
+}
+
+enum ParkingConstraint {
+  normal
+  van_only
+  mall_dock
+
+  @@map("parking_constraint")
+}
+
+enum VehicleType {
+  truck
+  van
+
+  @@map("vehicle_type")
+}
+
+enum VehicleTemperatureCapability {
+  reefer
+  ambient
+
+  @@map("vehicle_temperature_capability")
+}
+
+/// Outlet master data. The UUID is the internal identity. outlet_id is the source identifier.
+model Outlet {
+  id                 String             @id @default(uuid()) @db.Uuid
+  outletId           String             @unique @map("outlet_id")
+  brand              OutletBrand
+  district           String
+  depot              Depot
+  dockType           DockType           @map("dock_type")
+  parkingConstraint  ParkingConstraint  @map("parking_constraint")
+  mallWindow         String?            @map("mall_window")
+  windowOpenTime     DateTime?          @map("window_open_time") @db.Time(0)
+  windowCloseTime    DateTime?          @map("window_close_time") @db.Time(0)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("outlets")
+}
+
+/// Vehicle master data. driver_user_id is an application assignment, not a vehicles.csv column.
+model Vehicle {
+  id                String                        @id @default(uuid()) @db.Uuid
+  vehicleId         String                        @unique @map("vehicle_id")
+  type              VehicleType
+  temp              VehicleTemperatureCapability
+  weightCapKg       Decimal                       @map("weight_cap_kg")
+  volumeCapM3       Decimal                       @map("volume_cap_m3")
+  fuelType          String                        @map("fuel_type")
+  kmPerL            Decimal                       @map("km_per_l")
+  weeklyFuelQuotaL  Decimal                       @map("weekly_fuel_quota_l")
+  depot             Depot
+  driverUserId      String?                       @map("driver_user_id") @db.Uuid
+  driver            User?                         @relation(fields: [driverUserId], references: [id], onDelete: Restrict)
+  createdAt         DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([driverUserId])
+  @@map("vehicles")
 }
