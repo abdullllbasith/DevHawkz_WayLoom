@@ -28,9 +28,11 @@ model User {
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   drivenVehicles   Vehicle[]
   createdOrders    Order[]
-  loadingRecords   LoadingRecord[]    @relation("LoadingLoader")
-  deliveryRecords  DeliveryRecord[]   @relation("DeliveryDriver")
-  capturedProofs   ProofOfDelivery[]  @relation("ProofCapturer")
+  loadingRecords    LoadingRecord[]   @relation("LoadingLoader")
+  deliveryRecords   DeliveryRecord[]  @relation("DeliveryDriver")
+  capturedProofs    ProofOfDelivery[] @relation("ProofCapturer")
+  reportedExceptions Exception[]      @relation("ExceptionReporter")
+  receipts          Receipt[]         @relation("ReceiptStoreManager")
 
   @@map("users")
 }
@@ -160,6 +162,7 @@ model Order {
   orderVolumeM3    Decimal                     @map("order_volume_m3")
   submittedAt      DateTime?                   @map("submitted_at") @db.Timestamptz(3)
   tripStops        TripStop[]
+  deferrals        Deferral[]
   createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -247,6 +250,7 @@ model DeliveryRecord {
   deliveredUnits Int?              @map("delivered_units")
   notes          String?
   proofs         ProofOfDelivery[]
+  receipt        Receipt?
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -270,4 +274,62 @@ model ProofOfDelivery {
   @@index([deliveryRecordId])
   @@index([capturedByUserId])
   @@map("proofs_of_delivery")
+}
+
+/// Application planning reason codes. These names are not Challenge Booklet terminology.
+enum DeferralReason {
+  NO_CAPACITY
+  NO_REEFER
+  VAN_ACCESS
+  WINDOW_CONFLICT
+  DEPOT_MISMATCH
+  TIME_BUDGET
+
+  @@map("deferral_reason")
+}
+
+/// A planning non-allocation. The order remains the order. History is not unique per order.
+model Deferral {
+  id         String         @id @default(uuid()) @db.Uuid
+  orderId    String         @map("order_id") @db.Uuid
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  reason     DeferralReason
+  reportedAt DateTime       @map("reported_at") @db.Timestamptz(3)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([orderId])
+  @@map("deferrals")
+}
+
+/// Operational issue. No context foreign keys: an exception-context strategy is not approved.
+model Exception {
+  id               String   @id @default(uuid()) @db.Uuid
+  category         String
+  details          String?
+  occurredAt       DateTime @map("occurred_at") @db.Timestamptz(3)
+  reportedByUserId String?  @map("reported_by_user_id") @db.Uuid
+  reportedBy       User?    @relation("ExceptionReporter", fields: [reportedByUserId], references: [id], onDelete: Restrict)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([reportedByUserId])
+  @@map("exceptions")
+}
+
+/// Store Manager confirmation of one delivery. One current receipt per delivery record.
+model Receipt {
+  id                 String         @id @default(uuid()) @db.Uuid
+  deliveryRecordId   String         @unique @map("delivery_record_id") @db.Uuid
+  deliveryRecord     DeliveryRecord @relation(fields: [deliveryRecordId], references: [id], onDelete: Restrict)
+  storeManagerUserId String         @map("store_manager_user_id") @db.Uuid
+  storeManager       User           @relation("ReceiptStoreManager", fields: [storeManagerUserId], references: [id], onDelete: Restrict)
+  confirmedAt        DateTime       @map("confirmed_at") @db.Timestamptz(3)
+  result             String
+  issueDetails       String?        @map("issue_details")
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([storeManagerUserId])
+  @@map("receipts")
 }
