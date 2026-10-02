@@ -5,6 +5,7 @@ import { getPrismaClient } from "./db.js";
 import { createLogger } from "./log.js";
 import { prismaSessionStore } from "./security/session-store.js";
 import { prismaUserDirectory } from "./security/user-directory.js";
+import { assignedOutletIds } from "./security/user-outlet-store.js";
 
 try {
   start(loadConfig());
@@ -24,6 +25,7 @@ function start(config: ApiConfig): void {
       log,
       users: prismaUserDirectory(prisma),
       sessions: prismaSessionStore(prisma),
+      assignedOutletIds: (userId) => assignedOutletIds(prisma, userId),
     }),
   );
   let closing = false;

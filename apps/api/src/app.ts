@@ -2,6 +2,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NodeEnvironment } from "./config.js";
 import { logUnexpectedError, sendError, sendJson } from "./errors.js";
 import type { Logger } from "./log.js";
+import {
+  defineBusinessRoute,
+  enforceBusinessRoute,
+  type BusinessRoute,
+  type OutletAssignmentLookup,
+} from "./security/api-boundary.js";
 import { currentUser, login, logout, type UserDirectory } from "./security/auth.js";
 import type { SessionStore } from "./security/session.js";
 
@@ -11,10 +17,14 @@ export type AppOptions = {
   users: UserDirectory;
   sessions: SessionStore;
   now?: () => Date;
+  assignedOutletIds?: OutletAssignmentLookup;
+  businessRoutes?: readonly BusinessRoute[];
 };
 
 export function createApp(options: AppOptions) {
   const now = options.now ?? (() => new Date());
+  const assignedOutletIds = options.assignedOutletIds ?? (async () => []);
+  const businessRoutes = (options.businessRoutes ?? []).map((route) => defineBusinessRoute(route));
 
   return async function handleRequest(
     request: IncomingMessage,
@@ -22,6 +32,20 @@ export function createApp(options: AppOptions) {
   ): Promise<void> {
     try {
       const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+      const method = request.method ?? "GET";
+      const businessRoute = businessRoutes.find((route) => route.method === method && route.path === pathname);
+      if (businessRoute) {
+        await enforceBusinessRoute({
+          response,
+          cookieHeader: headerValue(request.headers.cookie),
+          users: options.users,
+          sessions: options.sessions,
+          now: now(),
+          assignedOutletIds,
+          route: businessRoute,
+        });
+        return;
+      }
       if (pathname === "/health") {
         if (request.method !== "GET") {
           sendError(response, 405, "method_not_allowed", "Method not allowed.");
