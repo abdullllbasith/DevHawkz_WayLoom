@@ -22,6 +22,8 @@ The process reads the repository root `.env` when that file exists. `NODE_ENV` m
 
 In development and test, `API_HOST` defaults to `127.0.0.1` and `API_PORT` defaults to `4000`. In production both values are required.
 
+`POST /api/auth/login` limits failed attempts in this process. `LOGIN_RATE_LIMIT_MAX` is the number of failures and `LOGIN_RATE_LIMIT_WINDOW_SECONDS` is the window in seconds. Development and test use 20 failures and 900 seconds when both are omitted. Production must set both. The limit uses the socket address and the login identifier. It does not read forwarded IP headers, and it is not shared across API processes.
+
 `GET /health` reports that this process is up. It does not check PostgreSQL or the planning service. A readiness endpoint is not exposed until those dependencies exist.
 
 ## Prisma

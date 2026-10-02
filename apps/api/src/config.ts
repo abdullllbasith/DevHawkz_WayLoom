@@ -1,3 +1,5 @@
+import { parseLoginRateLimit, type LoginRateLimitConfig } from "./security/login-rate-limit.js";
+
 export type NodeEnvironment = "development" | "test" | "production";
 
 export type LogLevel = "error" | "warn" | "info" | "debug";
@@ -7,6 +9,7 @@ export type ApiConfig = {
   host: string;
   port: number;
   logLevel: LogLevel;
+  loginRateLimit: LoginRateLimitConfig;
 };
 
 const nodeEnvironments: readonly NodeEnvironment[] = [
@@ -27,6 +30,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     host: parseHost(env.API_HOST, nodeEnv),
     port: parsePort(env.API_PORT, nodeEnv),
     logLevel: parseLogLevel(env.LOG_LEVEL),
+    loginRateLimit: parseLoginRateLimit(env, nodeEnv),
   };
 }
 

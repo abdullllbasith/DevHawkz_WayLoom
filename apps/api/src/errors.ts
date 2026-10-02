@@ -29,6 +29,7 @@ export function sendError(
   statusCode: number,
   code: string,
   message: string,
+  headers?: Record<string, string>,
 ): void {
   const body: ErrorBody = {
     error: {
@@ -36,7 +37,7 @@ export function sendError(
       message,
     },
   };
-  sendJson(response, statusCode, body);
+  sendJson(response, statusCode, body, headers);
 }
 
 export function logUnexpectedError(

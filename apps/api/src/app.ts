@@ -10,6 +10,7 @@ import {
 } from "./security/api-boundary.js";
 import { currentUser, login, logout, type UserDirectory } from "./security/auth.js";
 import { createCsrfToken, csrfTokenMatches } from "./security/csrf.js";
+import { clientAddress, createLoginRateLimiter, type LoginRateLimiter } from "./security/login-rate-limit.js";
 import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
 
 export type AppOptions = {
@@ -20,12 +21,14 @@ export type AppOptions = {
   now?: () => Date;
   assignedOutletIds?: OutletAssignmentLookup;
   businessRoutes?: readonly BusinessRoute[];
+  loginRateLimit?: LoginRateLimiter;
 };
 
 export function createApp(options: AppOptions) {
   const now = options.now ?? (() => new Date());
   const assignedOutletIds = options.assignedOutletIds ?? (async () => []);
   const businessRoutes = (options.businessRoutes ?? []).map((route) => defineBusinessRoute(route));
+  const loginRateLimit = options.loginRateLimit ?? createLoginRateLimiter({ maxFailures: 20, windowSeconds: 900 });
 
   return async function handleRequest(
     request: IncomingMessage,
@@ -66,6 +69,18 @@ export function createApp(options: AppOptions) {
           sendError(response, 400, "invalid_request", "Invalid request.");
           return;
         }
+        const remoteAddress = clientAddress(request);
+        const decision = loginRateLimit.check({
+          loginIdentifier: credentials.loginIdentifier,
+          remoteAddress,
+          now: now(),
+        });
+        if (!decision.allowed) {
+          sendError(response, 429, "rate_limited", "Too many attempts.", {
+            "retry-after": String(decision.retryAfterSeconds),
+          });
+          return;
+        }
         const result = await login({
           loginIdentifier: credentials.loginIdentifier,
           password: credentials.password,
@@ -75,6 +90,13 @@ export function createApp(options: AppOptions) {
           nodeEnv: options.nodeEnv,
         });
         if (!result.ok) {
+          if (remoteAddress !== null) {
+            loginRateLimit.recordFailure({
+              loginIdentifier: credentials.loginIdentifier,
+              remoteAddress,
+              now: now(),
+            });
+          }
           sendError(response, 401, "authentication_failed", "Authentication failed.");
           return;
         }
