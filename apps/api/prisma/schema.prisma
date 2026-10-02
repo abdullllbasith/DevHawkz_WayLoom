@@ -26,8 +26,11 @@ model User {
   passwordHash    String          @map("password_hash")
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  drivenVehicles  Vehicle[]
-  createdOrders   Order[]
+  drivenVehicles   Vehicle[]
+  createdOrders    Order[]
+  loadingRecords   LoadingRecord[]    @relation("LoadingLoader")
+  deliveryRecords  DeliveryRecord[]   @relation("DeliveryDriver")
+  capturedProofs   ProofOfDelivery[]  @relation("ProofCapturer")
 
   @@map("users")
 }
@@ -200,6 +203,8 @@ model TripStop {
   order           Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
   sequence        Int       @map("seq_in_route")
   plannedArrival  DateTime? @map("planned_arrival") @db.Time(0)
+  loadingRecords  LoadingRecord[]
+  deliveryRecords DeliveryRecord[]
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -207,4 +212,62 @@ model TripStop {
   @@index([tripId])
   @@index([orderId])
   @@map("trip_stops")
+}
+
+/// Loader verification for one allocated stop. Order is reached through TripStop.
+model LoadingRecord {
+  id                  String    @id @default(uuid()) @db.Uuid
+  tripStopId          String    @map("trip_stop_id") @db.Uuid
+  tripStop            TripStop  @relation(fields: [tripStopId], references: [id], onDelete: Restrict)
+  loaderUserId        String    @map("loader_user_id") @db.Uuid
+  loader              User      @relation("LoadingLoader", fields: [loaderUserId], references: [id], onDelete: Restrict)
+  expectedUnits       Int       @map("expected_units")
+  loadedUnits         Int       @map("loaded_units")
+  shortfallUnits      Int?      @map("shortfall_units")
+  verifiedAt          DateTime  @map("verified_at") @db.Timestamptz(3)
+  shortfallReportedAt DateTime? @map("shortfall_reported_at") @db.Timestamptz(3)
+  details             String?
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([tripStopId])
+  @@index([loaderUserId])
+  @@map("loading_records")
+}
+
+/// Driver delivery execution for one allocated stop. Outcome is free text because no outcome list is approved.
+model DeliveryRecord {
+  id             String            @id @default(uuid()) @db.Uuid
+  tripStopId     String            @map("trip_stop_id") @db.Uuid
+  tripStop       TripStop          @relation(fields: [tripStopId], references: [id], onDelete: Restrict)
+  driverUserId   String            @map("driver_user_id") @db.Uuid
+  driver         User              @relation("DeliveryDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+  deliveredAt    DateTime          @map("delivered_at") @db.Timestamptz(3)
+  outcome        String
+  deliveredUnits Int?              @map("delivered_units")
+  notes          String?
+  proofs         ProofOfDelivery[]
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([tripStopId])
+  @@index([driverUserId])
+  @@map("delivery_records")
+}
+
+/// Evidence for a delivery. The reference is not a storage-provider URL.
+model ProofOfDelivery {
+  id                 String         @id @default(uuid()) @db.Uuid
+  deliveryRecordId   String         @map("delivery_record_id") @db.Uuid
+  deliveryRecord     DeliveryRecord @relation(fields: [deliveryRecordId], references: [id], onDelete: Restrict)
+  evidenceReference  String         @map("evidence_reference")
+  capturedAt         DateTime       @map("captured_at") @db.Timestamptz(3)
+  capturedByUserId   String?        @map("captured_by_user_id") @db.Uuid
+  capturedBy         User?          @relation("ProofCapturer", fields: [capturedByUserId], references: [id], onDelete: Restrict)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([deliveryRecordId])
+  @@index([capturedByUserId])
+  @@map("proofs_of_delivery")
 }
