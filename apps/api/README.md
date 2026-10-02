@@ -56,6 +56,12 @@ npm run prisma:reset-test
 
 `npm run import:district-travel --workspace @wayloom/api` imports `district_travel.csv` into `district_travel_source`. That table is competition source data. The source identity is depot and district. It is not part of the three-file Hackathon runtime import. A validation failure writes nothing.
 
+`npm run import:service-allowance --workspace @wayloom/api` imports `service_allowance.csv` into `service_allowance_source`. That table is competition source data. The source identity is brand and dock type. It is not part of the three-file Hackathon runtime import. A validation failure writes nothing.
+
+`npm run import:traffic-speed --workspace @wayloom/api` imports `traffic_speed.csv` into `traffic_speed_source` when the file is present. The source identity is district, hour, and monsoon. An absent file is reported as skipped and writes nothing. A validation failure, duplicate identity, or existing-row conflict writes nothing and exits non-zero. It is not part of the three-file Hackathon runtime import and it is not an application startup dependency.
+
+`npm run import:road-conditions --workspace @wayloom/api` imports `road_conditions.csv` into `road_conditions_source` when the file is present. The source identity is district and date. The date stays text. An absent file is reported as skipped and writes nothing. A validation failure, duplicate identity, or existing-row conflict writes nothing and exits non-zero. It is not part of the three-file Hackathon runtime import and it is not an application startup dependency.
+
 ## Errors
 
 Unexpected failures return JSON:

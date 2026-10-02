@@ -427,3 +427,34 @@ model DistrictTravelSource {
   @@id([depot, district])
   @@map("district_travel_source")
 }
+
+/// Competition service-allowance source rows. Not an application-domain entity. Identity is (brand, dock_type).
+model ServiceAllowanceSource {
+  brand               String
+  dockType            String @map("dock_type")
+  serviceAllowanceMin String @map("service_allowance_min")
+
+  @@id([brand, dockType])
+  @@map("service_allowance_source")
+}
+
+/// Competition traffic-speed source rows. Not an application-domain entity. Identity is (district, hour, monsoon).
+model TrafficSpeedSource {
+  district   String
+  hour       String
+  monsoon    String
+  speedIndex String @map("speed_index")
+
+  @@id([district, hour, monsoon])
+  @@map("traffic_speed_source")
+}
+
+/// Competition road-conditions source rows. Not an application-domain entity. Identity is (district, date).
+model RoadConditionsSource {
+  district         String
+  date             String
+  disruptionIndex  String @map("disruption_index")
+
+  @@id([district, date])
+  @@map("road_conditions_source")
+}

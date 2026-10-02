@@ -13,12 +13,15 @@
     "prisma:status": "node scripts/prisma-database.mjs status",
     "prisma:check": "node scripts/prisma-database.mjs check",
     "prisma:reset-test": "node scripts/prisma-database.mjs reset-test test",
-    "test": "node --test dist/import/competition-import.test.js dist/import/outlets.test.js dist/import/vehicles.test.js dist/import/calendar.test.js dist/import/district-travel.test.js",
+    "test": "node --test dist/import/competition-import.test.js dist/import/outlets.test.js dist/import/vehicles.test.js dist/import/calendar.test.js dist/import/district-travel.test.js dist/import/service-allowance.test.js dist/import/traffic-speed.test.js dist/import/road-conditions.test.js",
     "import:competition": "node dist/import/cli.js",
     "import:outlets": "node dist/import/outlets-cli.js",
     "import:vehicles": "node dist/import/vehicles-cli.js",
     "import:calendar": "node dist/import/calendar-cli.js",
-    "import:district-travel": "node dist/import/district-travel-cli.js"
+    "import:district-travel": "node dist/import/district-travel-cli.js",
+    "import:service-allowance": "node dist/import/service-allowance-cli.js",
+    "import:traffic-speed": "node dist/import/traffic-speed-cli.js",
+    "import:road-conditions": "node dist/import/road-conditions-cli.js"
   },
   "devDependencies": {
     "@types/node": "24.19.0",

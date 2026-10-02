@@ -490,6 +490,12 @@ Hackathon planning may also use the approved additional operational datasets:
 
 `district_travel.csv` is source-backed competition data in PostgreSQL table `district_travel_source`. The source identity is `(depot, district)`. All eight source columns are `TEXT`. It is not an application-domain entity. The representation is recorded in `docs/data-model.md`. That record resolves an architecture gap. It is not a Blueprint v1.4 specification.
 
+`service_allowance.csv` is source-backed competition data in PostgreSQL table `service_allowance_source`. The source identity is `(brand, dock_type)`. All source columns are `TEXT`. It is not an application-domain entity and it is not on the three-file Hackathon runtime import path. The representation is recorded in `docs/data-model.md`. That record resolves an architecture gap. It is not a Blueprint v1.4 specification.
+
+`traffic_speed.csv` and `road_conditions.csv` are optional source-backed competition data in `traffic_speed_source` and `road_conditions_source`. Their identities are `(district, hour, monsoon)` and `(district, date)`. All source columns are `TEXT`. They are not application-domain entities, not MVP planning dependencies, and not on the three-file Hackathon runtime import path. The representations are recorded in `docs/data-model.md`. Those records resolve architecture gaps. They are not Blueprint v1.4 specifications.
+
+When `traffic_speed.csv` or `road_conditions.csv` is absent, Hackathon startup and the three-file runtime import continue and the optional import reports it skipped; when that dataset's own import runs, a malformed file, a duplicate source identity, or a conflict with an existing source row is reported, writes nothing, exits non-zero, is not treated as absence, and creates no fallback planning data.
+
 Optional datasets must remain explicitly optional unless the blueprint makes them mandatory.
 
 Datathon-only training/test/submission data must remain isolated from Hackathon runtime data.

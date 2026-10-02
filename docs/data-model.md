@@ -104,3 +104,84 @@ The normalized planning representation exposes these calculation inputs:
 - `inter_stop_km`
 
 No additional planning fields are created. Travel time and distance are not calculated from district names. Unit conversions that are not defined by the source or an approved task are not introduced. `road_class` and `free_flow_kmh` remain source fields. They are not planning inputs unless a later authoritative planning requirement explicitly requires them.
+
+## Phase 2 competition-data representations
+
+This section records the approved representation of every competition dataset inspected under `data/competition-import/`. Already implemented decisions stay in force. New table approvals below are explicit architecture-gap resolutions. Blueprint v1.4 did not specify these tables, identities, or `TEXT` columns. No Phase 5 normalized planning object is defined here.
+
+Shared rules for every source table approved in this section:
+
+- The table is source-backed competition data and is not an application-domain entity.
+- Source tokens are stored as `TEXT`. No numeric precision or scale is imposed.
+- No application enum is reused. No new enum, foreign key, UUID, or fabricated source-id column is added.
+- Empty identity fields are not a source identity.
+- Import uses the existing TASK-02-11 importer as a separate dataset command. That is not a second CSV framework.
+- Phase 5 does not read raw CSV rows or the Prisma source entity. It later reads a normalized planning representation that this section does not define.
+
+### Already implemented
+
+| Dataset | Category | Identity | Destination | Runtime path |
+|---|---|---|---|---|
+| `outlets.csv` | Application-domain master data | `outlet_id` | `outlets` | Normal three-file Hackathon runtime import |
+| `vehicles.csv` | Application-domain master data | `vehicle_id` | `vehicles` | Normal three-file Hackathon runtime import |
+| `calendar.csv` | Source-backed competition data | `date` | `calendar_source` | Normal three-file Hackathon runtime import |
+| `district_travel.csv` | Source-backed competition data | `(depot, district)` | `district_travel_source` | Separate import. Not on the three-file runtime path |
+
+Outlet and vehicle column types remain the types already implemented for those domain tables. Calendar remains as already implemented, including `date` as a date. Those implemented types are not rewritten by the `TEXT` rule above.
+
+### Service allowance source data
+
+The supplied `service_allowance.csv` has 9 rows and the headers `brand`, `dock_type`, `service_allowance_min`. It has no identifier column. Each `(brand, dock_type)` pair appears once. No identity cell is blank. The approved trip-time formula addresses service allowance as `service_allowance_min(brand, dock_type)`.
+
+The source identity is `(brand, dock_type)`. Brand alone is not the identity.
+
+PostgreSQL table `service_allowance_source`. Primary key `(brand, dock_type)`. Columns, all `TEXT`:
+
+- `brand`
+- `dock_type`
+- `service_allowance_min`
+
+The application brand and dock enums are not reused. No foreign key is added to Outlet. The minute token stays text. No unit conversion is approved.
+
+`service_allowance.csv` stays off the normal three-file Hackathon runtime import path unless that path is separately approved. TASK-02-16 implements this destination and does not redefine it.
+
+Phase 5 trip time uses `service_allowance_min` for a brand and dock type through the later normalized planning representation. This section does not define that object.
+
+### Traffic speed source data
+
+The supplied `traffic_speed.csv` has 576 rows and the headers `district`, `hour`, `monsoon`, `speed_index`. It has no identifier column. Each `(district, hour, monsoon)` triple appears once. No cell is blank. Blueprint v1.4 keeps this file available for later or advanced planning and says the Hackathon MVP must not depend on it. The approved trip-time formula does not use it.
+
+The source identity is `(district, hour, monsoon)`. That identity is an architecture-gap resolution from the supplied file. It was not specified by Blueprint v1.4. No foreign key is added to Outlet, calendar, or district travel. A matching district name or monsoon token does not approve a relationship.
+
+PostgreSQL table `traffic_speed_source`. Primary key `(district, hour, monsoon)`. Columns, all `TEXT`:
+
+- `district`
+- `hour`
+- `monsoon`
+- `speed_index`
+
+`traffic_speed.csv` is optional. It is not a normal Hackathon runtime import and not an MVP planning dependency. TASK-02-17 may import it through the existing importer when the file is present and this destination exists. A missing file does not fail Hackathon startup.
+
+Phase 5 does not consume `speed_index` under the current approved formulas. Promoting it to a planning input remains deferred.
+
+### Road conditions source data
+
+The supplied `road_conditions.csv` has 10920 rows and the headers `district`, `date`, `disruption_index`. It has no identifier column. Each `(district, date)` pair appears once. No cell is blank. The date tokens run from `2024-01-01` through `2026-06-28`. That span matches the supplied calendar file. The match does not approve a foreign key to `calendar_source` or to Outlet. Blueprint v1.4 keeps this file available for later or advanced planning and says the Hackathon MVP must not depend on it. The approved trip-time formula does not use it.
+
+The source identity is `(district, date)`. That identity is an architecture-gap resolution from the supplied file. It was not specified by Blueprint v1.4.
+
+PostgreSQL table `road_conditions_source`. Primary key `(district, date)`. Columns, all `TEXT`:
+
+- `district`
+- `date`
+- `disruption_index`
+
+`road_conditions.csv` is optional. It is not a normal Hackathon runtime import and not an MVP planning dependency. TASK-02-17 may import it through the existing importer when the file is present and this destination exists. A missing file does not fail Hackathon startup.
+
+Phase 5 does not consume `disruption_index` under the current approved formulas. Promoting it to a planning input remains deferred.
+
+When `traffic_speed.csv` or `road_conditions.csv` is absent, Hackathon startup and the three-file runtime import continue and the optional import reports it skipped; when that dataset's own import runs, a malformed file, a duplicate source identity, or a conflict with an existing source row is reported, writes nothing, exits non-zero, is not treated as absence, and creates no fallback planning data.
+
+### Deferred
+
+The Phase 5 normalized planning object remains undefined. No unit conversion is approved for service allowance, traffic speed, or road conditions. Datathon training, test, and submission files stay isolated and are not given Hackathon source tables by this section.
