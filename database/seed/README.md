@@ -13,8 +13,8 @@ Development login identifiers:
 
 The development password for each of those users is `wayloom-dev-only`. The database stores an Argon2id hash produced by the server password module. Each new hash has its own salt. The password is not a production credential.
 
-The seed assigns application driver `seed.driver` to competition vehicle `VEH001`. It does not change vehicle source fields. The order uses competition outlet `OUT001`, operating calendar date `2026-06-02`, and delivery identifier `SEED-2026-06-02-OUT001`. That delivery identifier is a development seed identifier. It does not define the production delivery-id format.
+The seed assigns application driver `seed.driver` to competition vehicle `VEH001`. It does not change vehicle source fields. It also assigns `seed.store-manager` to competition outlet `OUT001` through one `user_outlets` row. That row is the Store Manager outlet scope. The order actor field does not replace it. No other outlet is assigned. The order uses competition outlet `OUT001`, operating calendar date `2026-06-02`, and delivery identifier `SEED-2026-06-02-OUT001`. That delivery identifier is a development seed identifier. It does not define the production delivery-id format.
 
 Trips, loading, delivery, proof of delivery, receipts, deferrals, and exceptions are not seeded. The planning engine is not implemented, so those records are not invented here.
 
-A repeated run does not insert duplicates. A conflicting existing user, driver assignment, or order stops the seed without writing.
+A repeated run does not insert duplicates. An existing `user_outlets` pair for `seed.store-manager` and `OUT001` is left as it is. A conflicting existing user, driver assignment, or order stops the seed without writing.

@@ -16,6 +16,8 @@ import {
   seedUsers,
 } from "./scenario.js";
 
+const SEED_STORE_OUTLET_ASSIGNMENT_ID = "66666666-6666-4666-8666-666666666666";
+
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 loadRepositoryEnv(path.join(repoRoot, ".env"));
 
@@ -120,6 +122,20 @@ try {
     if (!storeManager) {
       throw new Error("Seed store manager is missing.");
     }
+    const existingOutletAssignment = await transaction.userOutlet.findUnique({
+      where: { userId_outletId: { userId: storeManager.id, outletId: outlet.id } },
+    });
+    let outletAssignment = "unchanged";
+    if (!existingOutletAssignment) {
+      await transaction.userOutlet.create({
+        data: {
+          id: SEED_STORE_OUTLET_ASSIGNMENT_ID,
+          userId: storeManager.id,
+          outletId: outlet.id,
+        },
+      });
+      outletAssignment = "assigned";
+    }
     const existingOrder = await transaction.order.findUnique({
       where: { deliveryId: seedOrder.deliveryId },
       include: { outlet: true, createdBy: true },
@@ -178,12 +194,13 @@ try {
       );
     }
 
-    return { usersInserted, usersUnchanged, driverAssignment, ordersInserted, ordersUnchanged };
+    return { usersInserted, usersUnchanged, driverAssignment, outletAssignment, ordersInserted, ordersUnchanged };
   });
   console.log(`database=${targetDatabase}`);
   console.log(`users_inserted=${String(summary.usersInserted)}`);
   console.log(`users_unchanged=${String(summary.usersUnchanged)}`);
   console.log(`driver_assignment=${summary.driverAssignment}`);
+  console.log(`outlet_assignment=${summary.outletAssignment}`);
   console.log(`orders_inserted=${String(summary.ordersInserted)}`);
   console.log(`orders_unchanged=${String(summary.ordersUnchanged)}`);
   console.log("planning_records=0");
