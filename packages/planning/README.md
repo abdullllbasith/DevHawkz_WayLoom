@@ -8,7 +8,7 @@ The input carries orders, outlets, vehicles, the planning-date calendar row, dis
 
 Weight is kilograms, volume is cubic metres, distance is kilometres, time is minutes, and fuel is litres. Trip time uses `depot_to_district_freeflow_min + inter_stop_freeflow_min * (orders - 1) + sum(service_allowance_min(brand, dock_type))`. Fuel uses `trip_distance_km / km_per_l`. The composition of `trip_distance_km` from `depot_to_district_km` and `inter_stop_km` is not approved, so a result omits fuel until a distance is supplied. Existing weekly fuel is a derived litre input. There is no approved sum of historical trips, and a missing value is invalid.
 
-The cutoff clock is `16:00:00` in `Asia/Colombo` (UTC+05:30). The official Challenge Booklet states that competition dates and times use Sri Lanka time. `submitted_at < cutoff_at` is eligible for the next run, and `submitted_at >= cutoff_at` waits for the following run. Cutoff classification is not implemented, and the contract still stores `timeZone: null`.
+The cutoff clock is `16:00:00` in `Asia/Colombo` (UTC+05:30). The official Challenge Booklet states that competition dates and times use Sri Lanka time. `classifyCutoff` compares `submitted_at` with that clock on the calendar day before the delivery day. `submitted_at < cutoff_at` is eligible for the next run, and `submitted_at >= cutoff_at` waits for the following run. The result is not stored and is not a deferral.
 
 Deferral reasons stay `NO_CAPACITY`, `NO_REEFER`, `VAN_ACCESS`, `WINDOW_CONFLICT`, `DEPOT_MISMATCH`, and `TIME_BUDGET`. A weekly fuel failure is the `weekly_fuel` constraint with no deferral reason. The Dispatcher confirms a result. AI does not override a hard constraint.
 

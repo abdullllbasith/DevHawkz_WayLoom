@@ -12,6 +12,6 @@
   },
   "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "tsc -p tsconfig.json --pretty false && node --test dist/contract.test.js dist/fixtures.test.js dist/validate.test.js dist/feasibility.test.js dist/trip-time.test.js dist/fuel.test.js"
+    "test": "tsc -p tsconfig.json --pretty false && node --test dist/contract.test.js dist/fixtures.test.js dist/validate.test.js dist/feasibility.test.js dist/trip-time.test.js dist/fuel.test.js dist/cutoff.test.js"
   }
 }

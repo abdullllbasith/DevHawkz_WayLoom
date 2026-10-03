@@ -88,7 +88,7 @@ function input(): Record<string, unknown> {
   return {
     contractVersion: "1",
     operationalDate: "2026-06-02",
-    cutoff: { clock: "16:00:00", timeZone: null },
+    cutoff: { clock: "16:00:00", timeZone: "Asia/Colombo" },
     orders: [
       {
         id: "66666666-6666-4666-8666-666666666666",

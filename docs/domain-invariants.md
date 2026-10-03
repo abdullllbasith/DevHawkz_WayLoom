@@ -34,7 +34,7 @@ Trip allocation status is only `PLANNED` or `CONFIRMED`. Deferral has no status 
 
 ## Operational timezone
 
-The operational timezone is `Asia/Colombo` (UTC+05:30). The official Challenge Booklet states that competition dates and times use Sri Lanka time. The cutoff clock remains `16:00:00` in that timezone. `submitted_at < cutoff_at` is eligible for the next planning run. `submitted_at >= cutoff_at` waits for the following planning run. No `planning_eligible` column is added. This catalogue does not classify eligibility.
+The operational timezone is `Asia/Colombo` (UTC+05:30). The official Challenge Booklet states that competition dates and times use Sri Lanka time. The cutoff clock remains `16:00:00` in that timezone. `submitted_at < cutoff_at` is eligible for the next planning run. `submitted_at >= cutoff_at` waits for the following planning run. No `planning_eligible` column is added. The planning cutoff function classifies eligibility and does not store it.
 
 ## Unresolved gaps
 
@@ -57,7 +57,7 @@ These gaps stay open. They are not filled by a new rule.
 | INV-ORD-005 | Order | Status is only a value in `order_status`. | Database, state-transition guard | HIGH | An unknown status is rejected. |
 | INV-ORD-006 | Order | A Store Manager submission moves `Draft` to `Submitted` and preserves the original `submitted_at`. Later steps do not overwrite that timestamp. | State-transition guard | HIGH | Submit succeeds from `Draft`. A later planning step leaves `submitted_at` unchanged. |
 | INV-ORD-007 | Order | An order is not `Confirmed` before it has been `Submitted`. | State-transition guard | HIGH | `Draft` to `Confirmed` fails. |
-| INV-ORD-008 | Order | Planning eligibility uses `submitted_at` and the cutoff rule in `Asia/Colombo`: `submitted_at < cutoff_at` may enter the next planning run, and `submitted_at >= cutoff_at` waits for the following run. The cutoff clock is `16:00:00`. | Planning engine | HIGH | Eligibility is not stored until cutoff classification is implemented. A submission at `16:00:00` waits. |
+| INV-ORD-008 | Order | Planning eligibility uses `submitted_at` and the cutoff rule in `Asia/Colombo`: `submitted_at < cutoff_at` may enter the next planning run, and `submitted_at >= cutoff_at` waits for the following run. The cutoff clock is `16:00:00`. | Planning engine | HIGH | `classifyCutoff` compares the stored instant with `16:00:00` Asia/Colombo on the day before delivery. A submission at `16:00:00` waits. Eligibility is not stored. |
 | INV-PLAN-001 | Planning | A confirmed allocation satisfies every hard constraint or it is not confirmed. A violation is not downgraded to a warning. | Planning engine | CRITICAL | Each violated constraint below produces no confirmed trip for that order. |
 | INV-PLAN-002 | Planning | A `chilled` order requires a reefer-capable vehicle. An `ambient` order may use an ambient or reefer vehicle. | Planning engine | CRITICAL | A chilled order on a non-reefer vehicle is not allocated. The deferral reason is `NO_REEFER`. |
 | INV-PLAN-003 | Planning | A van-only outlet requires a van. | Planning engine | CRITICAL | Another vehicle type is not allocated. The deferral reason is `VAN_ACCESS`. |

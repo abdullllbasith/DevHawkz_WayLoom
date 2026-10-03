@@ -21,10 +21,10 @@ export const FUEL_FORMULA = "trip_distance_km / km_per_l" as const;
 
 export const PROJECTED_FUEL_FORMULA = "existing_weekly_fuel_l + fuel_used_l" as const;
 
-/** Booklet cutoff clock. Equality waits for the following run. The operational timezone is not approved. */
+/** Booklet cutoff clock. Equality waits for the following run. Asia/Colombo is UTC+05:30. */
 export const CUTOFF_CLOCK = "16:00:00" as const;
 
-export const CUTOFF_TIME_ZONE = null;
+export const CUTOFF_TIME_ZONE = "Asia/Colombo" as const;
 
 export const deferralReasons = [
   "NO_CAPACITY",
@@ -160,7 +160,7 @@ export type PlanningServiceAllowance = {
 export type PlanningInput = {
   contractVersion: typeof PLANNING_CONTRACT_VERSION;
   operationalDate: string;
-  cutoff: { clock: typeof CUTOFF_CLOCK; timeZone: null };
+  cutoff: { clock: typeof CUTOFF_CLOCK; timeZone: typeof CUTOFF_TIME_ZONE };
   orders: PlanningOrder[];
   outlets: PlanningOutlet[];
   vehicles: PlanningVehicle[];
@@ -290,8 +290,8 @@ export function canonicalPlanningInput(value: PlanningInput): string {
 function parseCutoff(value: unknown): PlanningInput["cutoff"] | null {
   if (!isRecord(value)) return null;
   const record = allow(value, ["clock", "timeZone"]);
-  if (record === null || record.clock !== CUTOFF_CLOCK || record.timeZone !== null) return null;
-  return { clock: CUTOFF_CLOCK, timeZone: null };
+  if (record === null || record.clock !== CUTOFF_CLOCK || record.timeZone !== CUTOFF_TIME_ZONE) return null;
+  return { clock: CUTOFF_CLOCK, timeZone: CUTOFF_TIME_ZONE };
 }
 
 function parseOrder(value: unknown): PlanningOrder | null {

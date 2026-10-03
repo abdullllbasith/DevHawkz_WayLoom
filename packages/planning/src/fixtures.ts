@@ -2,7 +2,7 @@
  * Deterministic planning scenarios for later Phase 5 tests.
  * These values are not production seed data and do not plan a route.
  */
-import { CUTOFF_CLOCK, PLANNING_CONTRACT_VERSION } from "./contract.js";
+import { CUTOFF_CLOCK, CUTOFF_TIME_ZONE, PLANNING_CONTRACT_VERSION } from "./contract.js";
 
 export type ScenarioClassification = "feasible" | "infeasible" | "validation_failure" | "unallocated" | "withheld";
 
@@ -103,13 +103,13 @@ const scenarios: PlanningScenario[] = [
     input.orders[0].orderWeightKg = "600";
     addSecondOrder(input, { brand: "Fresh", district: "Colombo", depot: "Peliyagoda", orderWeightKg: "600" });
   }, { deferralReason: "NO_CAPACITY" }),
-  scenario("planning_cutoff_before", "A submission timestamp is available for a later cutoff test.", "cutoff", "withheld", "2026-06-01T08:00:00.000Z; timeZone is null", (input) => {
+  scenario("planning_cutoff_before", "A submission before 16:00 Asia/Colombo can enter the next-day run.", "cutoff", "withheld", "2026-06-01T08:00:00.000Z is 13:30 in Asia/Colombo", (input) => {
     input.orders[0].submittedAt = "2026-06-01T08:00:00.000Z";
   }),
-  scenario("planning_cutoff_boundary", "A 16:00:00Z instant is not classified as the operational cutoff.", "cutoff", "withheld", "2026-06-01T16:00:00.000Z; timeZone is null", (input) => {
+  scenario("planning_cutoff_boundary", "16:00:00Z is not the Asia/Colombo cutoff instant.", "cutoff", "withheld", "2026-06-01T16:00:00.000Z is 21:30 in Asia/Colombo", (input) => {
     input.orders[0].submittedAt = "2026-06-01T16:00:00.000Z";
   }),
-  scenario("planning_cutoff_after", "A later submission timestamp is available for a later cutoff test.", "cutoff", "withheld", "2026-06-01T18:00:00.000Z; timeZone is null", (input) => {
+  scenario("planning_cutoff_after", "A submission after 16:00 Asia/Colombo waits for the following run.", "cutoff", "withheld", "2026-06-01T18:00:00.000Z is 23:30 in Asia/Colombo", (input) => {
     input.orders[0].submittedAt = "2026-06-01T18:00:00.000Z";
   }),
   scenario("planning_determinism", "Equivalent orders and vehicles have stable contract ordering.", "determinism", "feasible", "deliveryId and vehicleId", (input) => {
@@ -213,7 +213,7 @@ function base() {
   return {
     contractVersion: PLANNING_CONTRACT_VERSION,
     operationalDate: "2026-06-02",
-    cutoff: { clock: CUTOFF_CLOCK, timeZone: null },
+    cutoff: { clock: CUTOFF_CLOCK, timeZone: CUTOFF_TIME_ZONE },
     orders: [
       {
         id: orderId,
