@@ -1,5 +1,7 @@
-import { localPayloadIsAllowed, type OfflineEventType, type OfflineLocalState } from "./offline-boundary";
+import type { OfflineEventType, OfflineLocalState } from "./offline-boundary";
 import type { DriverTrip } from "./driver-routes";
+
+const forbiddenLocalKeys = ["password", "passwordHash", "sessionToken", "csrfToken", "cookie", "DATABASE_URL"];
 
 export type CachedRoute = {
   tripId: string;
@@ -39,7 +41,7 @@ export function createMemoryOfflineStore(): OfflineStore {
       routes.clear();
     },
     async putEvent(event) {
-      if (!localPayloadIsAllowed(event.payload)) {
+      if (!payloadIsAllowed(event.payload)) {
         throw new Error("offline_payload_rejected");
       }
       events.set(event.clientEventId, event);
@@ -67,15 +69,23 @@ export function openIndexedDbOfflineStore(): Promise<OfflineStore> {
 
 function indexedDbStore(database: IDBDatabase): OfflineStore {
   return {
-    putRoute: (route) => requestToPromise(database, "routes", "readwrite", (store) => store.put(route)),
+    putRoute: async (route) => {
+      await requestToPromise(database, "routes", "readwrite", (store) => store.put(route));
+    },
     listRoutes: () => requestToPromise(database, "routes", "readonly", (store) => store.getAll()),
-    clearCompletedRoutes: () => requestToPromise(database, "routes", "readwrite", (store) => store.clear()),
+    clearCompletedRoutes: async () => {
+      await requestToPromise(database, "routes", "readwrite", (store) => store.clear());
+    },
     putEvent: async (event) => {
-      if (!localPayloadIsAllowed(event.payload)) throw new Error("offline_payload_rejected");
+      if (!payloadIsAllowed(event.payload)) throw new Error("offline_payload_rejected");
       await requestToPromise(database, "events", "readwrite", (store) => store.put(event));
     },
     listEvents: () => requestToPromise(database, "events", "readonly", (store) => store.getAll()),
   };
+}
+
+function payloadIsAllowed(value: Record<string, unknown>): boolean {
+  return Object.keys(value).every((key) => !forbiddenLocalKeys.includes(key));
 }
 
 function requestToPromise<T>(database: IDBDatabase, name: string, mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
