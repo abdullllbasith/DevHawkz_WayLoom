@@ -27,6 +27,8 @@ test("roleWorkspace resolves DISPATCHER to /dispatcher", () => {
   assert.equal(roleWorkspace("loader"), "/loader");
   assert.equal(roleWorkspace("DRIVER"), "/driver");
   assert.equal(roleWorkspace("driver"), "/driver");
+  assert.equal(roleWorkspace("STORE_MANAGER"), "/store");
+  assert.equal(roleWorkspace("store_manager"), "/store");
 });
 
 test("ROLE_OPTIONS includes the 4 canonical Designathon roles", () => {
