@@ -1,0 +1,121 @@
+.dispatcher-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #111827;
+  font-family: Inter, sans-serif;
+}
+
+.dispatcher-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.dispatcher-identity {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dispatcher-role,
+.dispatcher-user {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.dispatcher-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dispatcher-nav a {
+  padding: 8px;
+  border-left: 4px solid transparent;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.dispatcher-nav a:focus-visible,
+.dispatcher-logout:focus-visible,
+.dispatcher-menu:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.dispatcher-nav a[aria-current="page"] {
+  border-left-color: #ffffff;
+  font-weight: 700;
+}
+
+.dispatcher-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dispatcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dispatcher-menu {
+  display: none;
+}
+
+.dispatcher-content {
+  padding: 16px;
+}
+
+.dispatcher-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dispatcher-span {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.dispatcher-logout {
+  margin-top: auto;
+  padding: 8px;
+  border: 1px solid #ffffff;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+}
+
+.dispatcher-status {
+  margin: 0;
+  color: #64748b;
+}
+
+@media (max-width: 1023px) {
+  .dispatcher-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dispatcher-menu {
+    display: inline-flex;
+  }
+
+  .dispatcher-sidebar {
+    display: none;
+  }
+
+  .dispatcher-shell:has(.dispatcher-menu:checked) .dispatcher-sidebar {
+    display: flex;
+  }
+}

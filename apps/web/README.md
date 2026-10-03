@@ -2,11 +2,11 @@
 
 WayLoom Next.js + TypeScript frontend.
 
-This task initializes the application foundation only. Role screens, navigation, authentication, and API calls are not implemented.
+The Dispatcher workspace at `/dispatcher` is the authenticated shell. Screen content is not implemented. The shell reads `GET /api/auth/me` and logs out through `POST /api/auth/logout`. It does not plan, confirm, or store a session token in browser storage.
 
 ## Routing
 
-The App Router (`app/`) is the routing convention. The repository had no earlier Next.js router. Role routes are not part of this foundation.
+The App Router (`app/`) is the routing convention. Dispatcher destinations are `/dispatcher`, `/dispatcher/orders`, `/dispatcher/planning`, `/dispatcher/allocation-confirmation`, `/dispatcher/routes`, `/dispatcher/routes/:routeId`, `/dispatcher/deferrals`, and `/dispatcher/exceptions`.
 
 ## Commands
 
