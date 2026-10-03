@@ -338,6 +338,10 @@ If the actual dataset does not contain a required fuel attribute, stop and follo
 
 The approved planning cutoff is a domain/backend rule.
 
+The operational timezone is `Asia/Colombo` (UTC+05:30). The official Challenge Booklet states that competition dates and times use Sri Lanka time. This record does not invent that timezone. Do not use UTC, the machine timezone, the browser timezone, or a second timezone setting as the operational timezone.
+
+The cutoff clock remains `16:00:00` in `Asia/Colombo`. `submitted_at < cutoff_at` is eligible for the next planning run. `submitted_at >= cutoff_at` waits for the following planning run.
+
 Do not implement cutoff behavior only in the UI.
 
 Orders submitted before the approved cutoff may be eligible for the corresponding planning run.

@@ -247,7 +247,7 @@ These values are calculated later. They are not competition source fields, and t
 - a deferral reason from planning feasibility;
 - operational status from the domain workflow.
 
-The Phase 5 normalized planning object is contract version 1 in `packages/planning`. It carries the approved travel and service-allowance inputs. It does not calculate trip distance from those inputs, and it does not classify cutoff eligibility while the operational timezone is unresolved. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
+The Phase 5 normalized planning object is contract version 1 in `packages/planning`. It carries the approved travel and service-allowance inputs. It does not calculate trip distance from those inputs, and it does not classify cutoff eligibility. The operational timezone for that classification is `Asia/Colombo` (UTC+05:30), stated by the official Challenge Booklet. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
 
 ## Server-managed sessions
 
