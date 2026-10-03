@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { readDriverTrip, type DriverTrip } from "../../../../lib/driver-routes";
+import { openIndexedDbOfflineStore } from "../../../../lib/offline-store";
 
 type LoadState =
   | { kind: "loading" }
@@ -16,6 +17,7 @@ export default function DriverStopDetailsPage() {
   const params = useParams<{ tripId: string }>();
   const tripId = params.tripId;
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [savedLocally, setSavedLocally] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,8 +32,17 @@ export default function DriverStopDetailsPage() {
         if (trip === null) throw new Error("trip_payload_invalid");
         if (!cancelled) setState({ kind: "ready", trip });
       })
-      .catch(() => {
-        if (!cancelled) setState({ kind: "error" });
+      .catch(async () => {
+        const store = await openIndexedDbOfflineStore().catch(() => null);
+        const cached = store === null ? null : (await store.listRoutes()).find((route) => route.tripId === tripId)?.trip ?? null;
+        const trip = cached === undefined || cached === null ? null : readDriverTrip(cached);
+        if (!cancelled) {
+          if (trip === null) setState({ kind: "error" });
+          else {
+            setSavedLocally(true);
+            setState({ kind: "ready", trip });
+          }
+        }
       });
     return () => {
       cancelled = true;
@@ -67,6 +78,7 @@ export default function DriverStopDetailsPage() {
     <div className="driver-list">
       <section className="driver-card">
         <h2>{state.trip.depot}</h2>
+        {savedLocally ? <p>Saved Locally. The server has not confirmed this stop list.</p> : null}
         <p>Date: {state.trip.operationalDate}</p>
         <p>Trip number: {state.trip.tripNumber}</p>
         <p>Status: {state.trip.status}</p>

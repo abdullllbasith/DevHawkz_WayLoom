@@ -1,4 +1,6 @@
 import type { OfflineEventType, OfflineLocalState } from "./offline-boundary";
+import type { DriverTrip } from "./driver-routes";
+import type { OfflineStore, PendingSyncEvent } from "./offline-store";
 
 export type SyncDisposition = "applied" | "already-applied" | "retryable" | "non-retryable" | "unauthorized" | "conflict";
 
@@ -31,6 +33,143 @@ export function classifySyncResult(input: {
   }
   if (input.httpStatus >= 400) return "non-retryable";
   return "applied";
+}
+
+const eventTypeOrder = { "delivery outcome": 0, "proof of delivery": 1 } as const;
+
+export type SyncServerResult = {
+  clientEventId: string;
+  result: string;
+  errorCode?: string;
+};
+
+export type SyncSubmission =
+  | { ok: true; results: SyncServerResult[] }
+  | { ok: false; httpStatus: number };
+
+export function pendingSyncEvents(events: readonly PendingSyncEvent[]): PendingSyncEvent[] {
+  return events
+    .filter((event) => event.state === "Pending Sync" || event.state === "Syncing")
+    .slice()
+    .sort((left, right) => {
+      const created = left.clientCreatedAt.localeCompare(right.clientCreatedAt);
+      if (created !== 0) return created;
+      const type = eventTypeOrder[left.eventType] - eventTypeOrder[right.eventType];
+      if (type !== 0) return type;
+      return left.clientEventId.localeCompare(right.clientEventId);
+    });
+}
+
+export async function reconcileOfflineEvents(input: {
+  store: OfflineStore;
+  submit: (events: readonly PendingSyncEvent[]) => Promise<SyncSubmission>;
+  refresh: (trips: readonly DriverTrip[]) => Promise<void>;
+  readRoutes: () => Promise<{ ok: true; trips: DriverTrip[] } | { ok: false }>;
+}): Promise<PendingSyncEvent[]> {
+  const pending = pendingSyncEvents(await input.store.listEvents());
+  if (pending.length === 0) return [];
+  const syncing = pending.map((event) => ({ ...event, state: "Syncing" as const }));
+  for (const event of syncing) await input.store.putEvent(event);
+
+  let submission: SyncSubmission;
+  try {
+    submission = await input.submit(syncing);
+  } catch {
+    submission = { ok: false, httpStatus: 0 };
+  }
+
+  const updated: PendingSyncEvent[] = [];
+  for (const event of syncing) {
+    const next = applyResult(event, submission);
+    await input.store.putEvent(next);
+    updated.push(next);
+  }
+
+  if (updated.some((event) => event.state === "Synced")) {
+    const routes = await input.readRoutes();
+    if (routes.ok) await input.refresh(routes.trips);
+  }
+  return updated;
+}
+
+function applyResult(event: PendingSyncEvent, submission: SyncSubmission): PendingSyncEvent {
+  const attemptCount = event.attemptCount + 1;
+  const server = submission.ok ? submission.results.find((result) => result.clientEventId === event.clientEventId) : undefined;
+  const disposition = server === undefined
+    ? classifySyncResult({
+        eventType: event.eventType,
+        clientEventId: event.clientEventId,
+        recordedClientEventId: null,
+        httpStatus: submission.ok ? 502 : submission.httpStatus,
+        attemptCount,
+      })
+    : dispositionFor(event, server, attemptCount);
+  return {
+    clientEventId: event.clientEventId,
+    eventType: event.eventType,
+    targetId: event.targetId,
+    clientCreatedAt: event.clientCreatedAt,
+    payload: event.payload,
+    attemptCount,
+    state: nextLocalState(disposition, "Syncing"),
+  };
+}
+
+function dispositionFor(event: PendingSyncEvent, server: SyncServerResult, attemptCount: number): SyncDisposition {
+  if (server.result === "already applied") {
+    return classifySyncResult({
+      eventType: event.eventType,
+      clientEventId: event.clientEventId,
+      recordedClientEventId: event.clientEventId,
+      httpStatus: 200,
+      attemptCount,
+    });
+  }
+  if (server.result === "applied") {
+    return classifySyncResult({
+      eventType: event.eventType,
+      clientEventId: event.clientEventId,
+      recordedClientEventId: null,
+      httpStatus: 200,
+      attemptCount,
+    });
+  }
+  if (server.result === "unauthorized") {
+    return classifySyncResult({
+      eventType: event.eventType,
+      clientEventId: event.clientEventId,
+      recordedClientEventId: null,
+      httpStatus: 403,
+      domainCode: server.errorCode === "object_scope_failure" ? "object_scope_failure" : "authorization_failure",
+      attemptCount,
+    });
+  }
+  if (server.result === "conflict") {
+    return classifySyncResult({
+      eventType: event.eventType,
+      clientEventId: event.clientEventId,
+      recordedClientEventId: null,
+      httpStatus: 409,
+      domainCode: server.errorCode === "concurrency_conflict" ? "concurrency_conflict" : "lifecycle_conflict",
+      attemptCount,
+    });
+  }
+  if (server.result === "temporary server failure") {
+    return classifySyncResult({
+      eventType: event.eventType,
+      clientEventId: event.clientEventId,
+      recordedClientEventId: null,
+      httpStatus: 503,
+      attemptCount,
+    });
+  }
+  return classifySyncResult({
+    eventType: event.eventType,
+    clientEventId: event.clientEventId,
+    recordedClientEventId: null,
+    httpStatus: 400,
+    attemptCount,
+  });
 }
 
 export function nextLocalState(disposition: SyncDisposition, current: OfflineLocalState): OfflineLocalState {
