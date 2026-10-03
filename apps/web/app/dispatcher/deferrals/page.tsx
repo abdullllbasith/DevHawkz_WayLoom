@@ -131,8 +131,8 @@ export default function DispatcherDeferralsPage() {
   const kpis = computeDeferralsKpis(deferrals);
 
   // Identify post-cutoff orders that are awaiting the following run
-  const postCutoffOrders = orders.filter((o) =>
-    operationalDate ? isPostCutoffOrder(o.submittedAt, operationalDate) : false,
+  const postCutoffOrders = orders.filter(
+    (o) => /^\d{4}-\d{2}-\d{2}$/.test(o.orderDate) && isPostCutoffOrder(o.submittedAt, o.orderDate),
   );
 
   function handleExportCsv() {
@@ -392,6 +392,18 @@ export default function DispatcherDeferralsPage() {
                   </div>
                 )}
               </div>
+
+              {/^\d{4}-\d{2}-\d{2}$/.test(selectedDeferral.orderDate) &&
+                isPostCutoffOrder(selectedDeferral.submittedAt, selectedDeferral.orderDate) && (
+                  <div
+                    className="deferral-constraint-callout"
+                    style={{ borderLeftColor: "#2563eb", backgroundColor: "#eff6ff" }}
+                  >
+                    <strong>Cutoff boundary:</strong> This order was submitted at or after 16:00:00 Asia/Colombo on
+                    the day before its operational date. It belongs to the following planning run, not an ordinary
+                    capacity deferral for the current run.
+                  </div>
+                )}
 
               {/* Order Specifications */}
               <h4 className="card-subtitle-dark" style={{ marginTop: "16px", marginBottom: "8px" }}>

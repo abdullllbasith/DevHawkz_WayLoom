@@ -28,10 +28,16 @@ export default function DispatcherExceptionsPage() {
 
   // Modal State for Record Exception
   const [modalOpen, setModalOpen] = useState(false);
-  const [formCategory, setFormCategory] = useState("loading problem");
+  const [categoryPreset, setCategoryPreset] = useState("loading problem");
+  const [customCategory, setCustomCategory] = useState("");
   const [formDetails, setFormDetails] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  function resolvedExceptionCategory(): string {
+    if (categoryPreset === "custom") return customCategory.trim();
+    return categoryPreset;
+  }
 
   async function loadExceptions() {
     try {
@@ -93,7 +99,7 @@ export default function DispatcherExceptionsPage() {
     e.preventDefault();
     setFormError(null);
 
-    const validation = validateCreateExceptionInput(formCategory, formDetails);
+    const validation = validateCreateExceptionInput(resolvedExceptionCategory(), formDetails);
     if (!validation.ok) {
       setFormError(validation.error);
       return;
@@ -130,7 +136,8 @@ export default function DispatcherExceptionsPage() {
       const created: unknown = await response.json().catch(() => null);
       setModalOpen(false);
       setFormDetails("");
-      setFormCategory("loading problem");
+      setCategoryPreset("loading problem");
+      setCustomCategory("");
       setFormSubmitting(false);
 
       // Refresh list
@@ -467,8 +474,8 @@ export default function DispatcherExceptionsPage() {
                   <select
                     id="modal-category-select"
                     className="modal-input"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
+                    value={categoryPreset}
+                    onChange={(e) => setCategoryPreset(e.target.value)}
                   >
                     <option value="loading problem">Loading Problem (shortfall, dock issue)</option>
                     <option value="vehicle breakdown">Vehicle Breakdown (engine, tire, battery)</option>
@@ -480,7 +487,7 @@ export default function DispatcherExceptionsPage() {
                   </select>
                 </div>
 
-                {formCategory === "custom" && (
+                {categoryPreset === "custom" && (
                   <div className="modal-form-group">
                     <label htmlFor="modal-custom-category" className="modal-label">
                       Custom Category Description *
@@ -490,7 +497,8 @@ export default function DispatcherExceptionsPage() {
                       type="text"
                       className="modal-input"
                       placeholder="e.g. cold room failure"
-                      onChange={(e) => setFormCategory(e.target.value)}
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
                       required
                     />
                   </div>

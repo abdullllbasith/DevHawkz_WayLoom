@@ -50,14 +50,15 @@ export function activeDispatcherHref(pathname: string): string | null {
   if (
     pathname === "/dispatcher/planning" ||
     pathname.startsWith("/dispatcher/planning/") ||
-    pathname.startsWith("/dispatcher/allocation-confirmation") ||
-    pathname === "/dispatcher/deferrals" ||
-    pathname.startsWith("/dispatcher/deferrals/")
+    pathname.startsWith("/dispatcher/allocation-confirmation")
   ) {
     return "/dispatcher/planning";
   }
+  if (pathname === "/dispatcher/deferrals" || pathname.startsWith("/dispatcher/deferrals/")) {
+    return null;
+  }
   if (pathname === "/dispatcher/exceptions" || pathname.startsWith("/dispatcher/exceptions/")) {
-    return "/dispatcher/workflow";
+    return null;
   }
   const match = dispatcherNavigation.find((item) => item.href !== "/dispatcher" && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
   return match?.href ?? null;

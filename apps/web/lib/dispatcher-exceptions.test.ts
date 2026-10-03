@@ -110,6 +110,8 @@ test("validateCreateExceptionInput enforces category requirement and preserves d
     assert.equal(validNoDetails.category, "vehicle breakdown");
     assert.equal(validNoDetails.details, undefined);
   }
+
+  assert.equal(validateCreateExceptionInput("custom").ok, false);
 });
 
 test("exportExceptionsCsv produces structured CSV without fabricated data", () => {

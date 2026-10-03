@@ -164,6 +164,9 @@ export function validateCreateExceptionInput(
   if (trimmedCategory.length === 0) {
     return { ok: false, error: "Exception category is required." };
   }
+  if (trimmedCategory.toLowerCase() === "custom") {
+    return { ok: false, error: "Enter a descriptive category instead of the placeholder value." };
+  }
 
   const trimmedDetails = details?.trim();
   return {
