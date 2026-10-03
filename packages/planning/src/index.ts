@@ -19,6 +19,8 @@ export {
   planningDatasets,
   planningUnits,
 } from "./contract.js";
+export { planningScenarios } from "./fixtures.js";
+export type { PlanningScenario, ScenarioClassification } from "./fixtures.js";
 export type {
   ContractResult,
   DeferralReason,

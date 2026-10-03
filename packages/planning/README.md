@@ -11,3 +11,5 @@ Weight is kilograms, volume is cubic metres, distance is kilometres, time is min
 The cutoff clock is `16:00:00`. `submitted_at < cutoff_at` is eligible for the next run, and `submitted_at >= cutoff_at` waits for the following run. The operational timezone is not approved, so the contract stores `timeZone: null` and does not classify eligibility.
 
 Deferral reasons stay `NO_CAPACITY`, `NO_REEFER`, `VAN_ACCESS`, `WINDOW_CONFLICT`, `DEPOT_MISMATCH`, and `TIME_BUDGET`. A weekly fuel failure is the `weekly_fuel` constraint with no deferral reason. The Dispatcher confirms a result. AI does not override a hard constraint.
+
+Scenario fixtures in this package are test inputs. They are not production seed data.
