@@ -23,6 +23,8 @@ export { planningScenarios } from "./fixtures.js";
 export type { PlanningScenario, ScenarioClassification } from "./fixtures.js";
 export { validatePlanningInput, validationCategories } from "./validate.js";
 export type { PlanningValidationFailure, PlanningValidationResult, ValidationCategory } from "./validate.js";
+export { evaluateFeasibility } from "./feasibility.js";
+export type { ConstraintEvaluation, ConstraintStatus, FeasibilityResult, PlanningCandidate } from "./feasibility.js";
 export type {
   ContractResult,
   DeferralReason,
