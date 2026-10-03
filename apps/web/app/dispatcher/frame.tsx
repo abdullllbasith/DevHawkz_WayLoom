@@ -19,6 +19,26 @@ export function DispatcherFrame({
   const pathname = usePathname();
   const active = activeDispatcherHref(pathname);
 
+  const isOrdersPage = pathname.startsWith("/dispatcher/orders");
+  const isDashboardPage = pathname === "/dispatcher";
+
+  let breadcrumb = "Dashboard";
+  let title = "Good evening, Dispatcher";
+  let subtitle = "Today, 12 Sep 2026";
+  let dateText = "13 Sep 2026 (Today)";
+
+  if (isOrdersPage) {
+    breadcrumb = "Dispatcher > Orders > All Orders";
+    title = "Orders";
+    subtitle = "View, manage and select orders for delivery planning.";
+    dateText = "13 Sep 2025 (Today)";
+  } else if (!isDashboardPage) {
+    const matched = dispatcherNavigation.find((i) => i.href === active);
+    breadcrumb = `Dispatcher > ${matched?.label ?? "Workspace"}`;
+    title = matched?.label ?? "Dispatcher";
+    subtitle = "Operations Workspace";
+  }
+
   return (
     <div className="dispatcher-shell">
       <aside className="dispatcher-sidebar">
@@ -77,9 +97,9 @@ export function DispatcherFrame({
               aria-label="Show Dispatcher navigation"
             />
             <div className="dispatcher-header-title-block">
-              <span className="dispatcher-breadcrumb">Dashboard</span>
-              <h1 className="dispatcher-greeting">Good evening, Dispatcher</h1>
-              <span className="dispatcher-date-sub">Today, 12 Sep 2026</span>
+              <span className="dispatcher-breadcrumb">{breadcrumb}</span>
+              <h1 className="dispatcher-greeting">{title}</h1>
+              <span className="dispatcher-date-sub">{subtitle}</span>
             </div>
           </div>
 
@@ -104,7 +124,7 @@ export function DispatcherFrame({
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span>13 Sep 2026 (Today)</span>
+              <span>{dateText}</span>
             </button>
 
             <button type="button" className="dispatcher-icon-btn" aria-label="Notifications">
