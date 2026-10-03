@@ -1,3 +1,4 @@
+import { orderStatuses } from "../domain/order.js";
 import { hashPassword, verifyPassword } from "../security/password.js";
 
 export const SEED_PASSWORD = "wayloom-dev-only";
@@ -72,12 +73,40 @@ export function sameSeedOrder(existing: {
   orderVolumeM3: string;
   submittedAt: Date | null;
 }): boolean {
+  return sameSeedOrderIdentity(existing) && existing.status === seedOrder.status;
+}
+
+export function preservedSeedOrder(existing: {
+  deliveryId: string;
+  orderDate: Date;
+  outletSourceId: string;
+  createdByLogin: string;
+  status: string;
+  tempRequirement: string;
+  orderUnits: number;
+  orderWeightKg: string;
+  orderVolumeM3: string;
+  submittedAt: Date | null;
+}): boolean {
+  return sameSeedOrderIdentity(existing) && orderStatuses.some((status) => status === existing.status && status !== "DRAFT");
+}
+
+function sameSeedOrderIdentity(existing: {
+  deliveryId: string;
+  orderDate: Date;
+  outletSourceId: string;
+  createdByLogin: string;
+  tempRequirement: string;
+  orderUnits: number;
+  orderWeightKg: string;
+  orderVolumeM3: string;
+  submittedAt: Date | null;
+}): boolean {
   return (
     existing.deliveryId === seedOrder.deliveryId &&
     existing.orderDate.toISOString().slice(0, 10) === seedOrder.orderDate &&
     existing.outletSourceId === seedOrder.outletSourceId &&
     existing.createdByLogin === "seed.store-manager" &&
-    existing.status === seedOrder.status &&
     existing.tempRequirement === seedOrder.tempRequirement &&
     existing.orderUnits === seedOrder.orderUnits &&
     existing.orderWeightKg === seedOrder.orderWeightKg &&

@@ -7,7 +7,7 @@ import { transitionOrder } from "../domain/order-transition.js";
 import { assertImportDatabaseTarget } from "../import/database-target.js";
 import {
   hashSeedPassword,
-  sameSeedOrder,
+  preservedSeedOrder,
   seedOrder,
   seedOrderDate,
   SEED_OUTLET_ID,
@@ -174,7 +174,7 @@ try {
       }
       ordersInserted = 1;
     } else if (
-      sameSeedOrder({
+      preservedSeedOrder({
         deliveryId: existingOrder.deliveryId,
         orderDate: existingOrder.orderDate,
         outletSourceId: existingOrder.outlet.outletId,

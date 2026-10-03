@@ -17,4 +17,4 @@ The seed assigns application driver `seed.driver` to competition vehicle `VEH001
 
 Trips, loading, delivery, proof of delivery, receipts, deferrals, and exceptions are not seeded. The planning engine is not implemented, so those records are not invented here.
 
-A repeated run does not insert duplicates. An existing `user_outlets` pair for `seed.store-manager` and `OUT001` is left as it is. A conflicting existing user, driver assignment, or order stops the seed without writing.
+A repeated run does not insert duplicates. An existing `user_outlets` pair for `seed.store-manager` and `OUT001` is left as it is. The seeded order is left as it is when its delivery identity still matches and its status is `SUBMITTED` or a later approved status. The seed does not change that status. A different outlet, creator, quantity, date, or submission time still stops the seed without writing, as does a conflicting user or driver assignment.
