@@ -11,6 +11,7 @@ import {
   parsePlanningFailure,
   parsePlanningInput,
   parsePlanningResult,
+  planningAuthority,
   planningDatasets,
 } from "./contract.js";
 
@@ -35,6 +36,10 @@ test("a versioned planning input accepts approved fields and sorts them", () => 
   assert.equal(FUEL_FORMULA, "trip_distance_km / km_per_l");
   assert.equal(planningDatasets.find((item) => item.dataset === "traffic_speed")?.consumption, "not_consumed");
   assert.equal(planningDatasets.find((item) => item.dataset === "road_conditions")?.consumption, "not_consumed");
+  assert.equal(planningAuthority.objective, null);
+  assert.equal(planningAuthority.feasibility, "deterministic_engine");
+  assert.equal(planningAuthority.confirmation, "dispatcher");
+  assert.equal(planningAuthority.ai, "decision_support");
 });
 
 test("missing vehicle fuel, a partial window, and a secret are rejected", () => {

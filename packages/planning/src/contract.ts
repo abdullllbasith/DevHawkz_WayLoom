@@ -69,10 +69,12 @@ export const planningDatasets = [
   { dataset: "road_conditions", consumption: "not_consumed" },
 ] as const;
 
+/** No business objective is approved. OR-Tools stays optional and must not change feasibility, cutoff, trip time, fuel, or validation. */
 export const planningAuthority = {
   feasibility: "deterministic_engine",
   confirmation: "dispatcher",
   ai: "decision_support",
+  objective: null,
 } as const;
 
 const secretKeys = new Set([
