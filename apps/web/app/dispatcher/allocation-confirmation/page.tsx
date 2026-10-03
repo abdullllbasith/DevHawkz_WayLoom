@@ -1,5 +1,5 @@
-import { DispatcherScreen } from "../screen";
+import { ApprovedPlanView } from "./approved-plan-view";
 
 export default function DispatcherAllocationConfirmationPage() {
-  return <DispatcherScreen title="Allocation Confirmation" />;
+  return <ApprovedPlanView />;
 }

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
+  confirmPlanOnServer,
+} from "../../../lib/dispatcher-confirmation";
+import {
   defaultAiReasoningInsights,
   defaultDeferredOrders,
   defaultPlanConstraints,
@@ -18,6 +21,7 @@ import {
   type VehicleAssignment,
   type VehicleCategoryTab,
 } from "../../../lib/dispatcher-planning";
+import { ApprovedPlanView } from "../allocation-confirmation/approved-plan-view";
 
 export default function DispatcherPlanningPage() {
   const router = useRouter();
@@ -28,6 +32,8 @@ export default function DispatcherPlanningPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleAssignment | null>(null);
   const [vehicles, setVehicles] = useState<VehicleAssignment[]>(() => [...defaultVehicleAssignments]);
   const [isApproved, setIsApproved] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [inFlightRun, setInFlightRun] = useState(false);
 
@@ -67,45 +73,48 @@ export default function DispatcherPlanningPage() {
     }
   };
 
-  const handleApprovePlan = () => {
-    setIsApproved(true);
-    // Smooth transition into the approved state
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleApprovePlan = async () => {
+    if (isConfirming) return;
+    setIsConfirming(true);
+    setConfirmError(null);
+
+    try {
+      let csrfToken = "";
+      try {
+        const csrfRes = await fetch("/api/auth/csrf");
+        if (csrfRes.ok) {
+          const csrfData = (await csrfRes.json()) as { csrfToken?: string };
+          csrfToken = csrfData.csrfToken ?? "";
+        }
+      } catch {
+        // Safe fallback if CSRF cannot be loaded
+      }
+
+      const result = await confirmPlanOnServer({ csrfToken });
+      if (result.ok) {
+        setIsApproved(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setConfirmError(result.message);
+      }
+    } catch {
+      setConfirmError("An unexpected error occurred while confirming allocation.");
+    } finally {
+      setIsConfirming(false);
+    }
   };
+
+  if (isApproved) {
+    return <ApprovedPlanView />;
+  }
 
   return (
     <div className="planning-page-container">
-      {/* 1. If Approved: Delivery Plan Approved Banner */}
-      {isApproved && (
-        <section className="plan-approved-banner" role="region" aria-label="Approval Notification">
-          <div className="approved-banner-left">
-            <div className="approved-icon-circle" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="approved-banner-title">Delivery Plan Approved!</h2>
-              <p className="approved-banner-sub">
-                The optimized delivery plan has been successfully approved and sent to the warehouse loading team.
-              </p>
-            </div>
-          </div>
-          <div className="approved-banner-right">
-            <div className="approved-meta-item">
-              <span className="meta-label">Plan ID</span>
-              <span className="meta-val">PLAN-2025-0913-01</span>
-            </div>
-            <div className="approved-meta-item">
-              <span className="meta-label">Approved by</span>
-              <span className="meta-val">Dispatcher</span>
-            </div>
-            <div className="approved-meta-item">
-              <span className="meta-label">Approved at</span>
-              <span className="meta-val">13 Sep 2025, 08:42 PM</span>
-            </div>
-          </div>
-        </section>
+      {confirmError && (
+        <div className="orders-feedback-banner error" role="alert">
+          <span>{confirmError}</span>
+          <button type="button" onClick={() => setConfirmError(null)} aria-label="Dismiss error">✕</button>
+        </div>
       )}
 
       {/* 2. Top Planning KPI Metrics (6 across) */}
@@ -671,9 +680,10 @@ export default function DispatcherPlanningPage() {
             type="button"
             className="btn-approve-plan"
             onClick={handleApprovePlan}
+            disabled={isConfirming}
           >
             <span aria-hidden="true">✔</span>
-            <span>Approve Plan &amp; Send to Loader →</span>
+            <span>{isConfirming ? "Confirming allocation..." : "Approve Plan & Send to Loader →"}</span>
           </button>
         </div>
       </footer>
