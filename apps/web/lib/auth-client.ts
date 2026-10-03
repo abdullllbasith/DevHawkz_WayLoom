@@ -67,7 +67,7 @@ export function roleWorkspace(role: string): string {
     case "LOADER":
       return "/loader";
     case "DRIVER":
-      return "/dispatcher";
+      return "/driver";
     case "STORE_MANAGER":
       return "/dispatcher";
     default:

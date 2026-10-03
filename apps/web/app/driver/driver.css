@@ -1,0 +1,161 @@
+.driver-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.driver-top,
+.driver-heading,
+.driver-main {
+  padding: 16px;
+}
+
+.driver-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.driver-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.driver-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: #0f172a;
+}
+
+.driver-identity {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #475569;
+}
+
+.driver-top .dispatcher-logout {
+  margin-left: auto;
+}
+
+.driver-heading h1 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+.driver-heading p,
+.driver-crumb {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.driver-main {
+  padding-bottom: 96px;
+}
+
+.driver-empty,
+.driver-denied,
+.driver-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.driver-list {
+  display: grid;
+  gap: 12px;
+}
+
+.driver-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.driver-card p,
+.driver-empty p,
+.driver-denied p {
+  margin: 4px 0;
+  color: #475569;
+}
+
+.driver-card a,
+.driver-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.driver-nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.driver-nav a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.driver-nav a[aria-current="page"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+@media (min-width: 768px) {
+  .driver-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .driver-nav {
+    position: static;
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    display: flex;
+    flex-direction: column;
+    border-top: 0;
+    border-right: 1px solid #e2e8f0;
+    padding: 16px;
+  }
+
+  .driver-top,
+  .driver-heading,
+  .driver-main {
+    grid-column: 2;
+  }
+
+  .driver-main {
+    padding-bottom: 24px;
+  }
+}
