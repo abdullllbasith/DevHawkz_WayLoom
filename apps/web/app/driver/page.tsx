@@ -97,7 +97,7 @@ export default function DriverRoutesPage() {
         <h2>Synchronization</h2>
         {source === "saved" ? <p>Saved Locally. The server has not confirmed this route list.</p> : <p>Route list read from the server.</p>}
         {syncEvents.length === 0 ? <p>No local delivery events.</p> : syncEvents.map((event) => (
-          <p key={event.clientEventId}>{event.eventType}: {event.state}</p>
+          <p key={event.clientEventId}>{event.eventType}: {event.state}{event.attention === undefined ? "" : `. ${event.attention}`}</p>
         ))}
       </section>
       {state.trips.map((trip) => (

@@ -4,6 +4,24 @@ import type { OfflineStore, PendingSyncEvent } from "./offline-store";
 
 export type SyncDisposition = "applied" | "already-applied" | "retryable" | "non-retryable" | "unauthorized" | "conflict";
 
+export const syncAttentionLabels = [
+  "synchronized successfully",
+  "already synchronized",
+  "retrying",
+  "rejected",
+  "conflict requiring attention",
+] as const;
+
+export type SyncAttentionLabel = (typeof syncAttentionLabels)[number];
+
+export function syncAttentionLabel(disposition: SyncDisposition): SyncAttentionLabel {
+  if (disposition === "applied") return "synchronized successfully";
+  if (disposition === "already-applied") return "already synchronized";
+  if (disposition === "retryable") return "retrying";
+  if (disposition === "conflict") return "conflict requiring attention";
+  return "rejected";
+}
+
 const retryLimit = 5;
 
 export function sameClientEvent(left: string, right: string): boolean {
@@ -112,6 +130,7 @@ function applyResult(event: PendingSyncEvent, submission: SyncSubmission): Pendi
     payload: event.payload,
     attemptCount,
     state: nextLocalState(disposition, "Syncing"),
+    attention: syncAttentionLabel(disposition),
   };
 }
 

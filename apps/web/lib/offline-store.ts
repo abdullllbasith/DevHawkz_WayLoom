@@ -1,4 +1,5 @@
 import type { OfflineEventType, OfflineLocalState } from "./offline-boundary";
+import type { SyncAttentionLabel } from "./offline-policy";
 import type { DriverTrip } from "./driver-routes";
 
 const forbiddenLocalKeys = ["password", "passwordHash", "sessionToken", "csrfToken", "cookie", "DATABASE_URL"];
@@ -17,6 +18,7 @@ export type PendingSyncEvent = {
   state: OfflineLocalState;
   attemptCount: number;
   payload: Record<string, unknown>;
+  attention?: SyncAttentionLabel;
 };
 
 export type OfflineStore = {
@@ -25,6 +27,7 @@ export type OfflineStore = {
   clearCompletedRoutes(): Promise<void>;
   putEvent(event: PendingSyncEvent): Promise<void>;
   listEvents(): Promise<PendingSyncEvent[]>;
+  deleteEvent(clientEventId: string): Promise<void>;
 };
 
 export function createMemoryOfflineStore(): OfflineStore {
@@ -48,6 +51,9 @@ export function createMemoryOfflineStore(): OfflineStore {
     },
     async listEvents() {
       return [...events.values()];
+    },
+    async deleteEvent(clientEventId) {
+      events.delete(clientEventId);
     },
   };
 }
@@ -81,6 +87,7 @@ function indexedDbStore(database: IDBDatabase): OfflineStore {
       await requestToPromise(database, "events", "readwrite", (store) => store.put(event));
     },
     listEvents: () => requestToPromise(database, "events", "readonly", (store) => store.getAll()),
+    deleteEvent: (clientEventId) => requestToPromise(database, "events", "readwrite", (store) => store.delete(clientEventId)).then(() => undefined),
   };
 }
 

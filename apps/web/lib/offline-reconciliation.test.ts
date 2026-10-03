@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 
 import type { DriverTrip } from "./driver-routes.ts";
@@ -42,7 +44,10 @@ test("reconnection submits pending events in recorded order and keeps each resul
   });
   assert.deepEqual(submitted, ["outcome-1", "proof-1"]);
   assert.equal(results.find((item) => item.clientEventId === "outcome-1")?.state, "Synced");
+  assert.equal(results.find((item) => item.clientEventId === "outcome-1")?.attention, "synchronized successfully");
   assert.equal(results.find((item) => item.clientEventId === "proof-1")?.state, "Pending Sync");
+  assert.equal(results.find((item) => item.clientEventId === "proof-1")?.attention, "retrying");
+  assert.equal(results.find((item) => item.clientEventId === "proof-1")?.targetId, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   assert.equal(results.find((item) => item.clientEventId === "proof-1")?.attemptCount, 1);
   assert.equal(results.find((item) => item.clientEventId === "proof-1")?.clientEventId, "proof-1");
   assert.equal((await store.listEvents()).find((item) => item.clientEventId === "done-1")?.state, "Synced");
@@ -54,6 +59,7 @@ test("an already-applied event converges and a conflict stays visible", async ()
   const store = createMemoryOfflineStore();
   await store.putEvent(event("outcome-1", "delivery outcome", "2026-06-02T09:00:00.000Z", { outcome: "left at gate" }));
   await store.putEvent(event("outcome-2", "delivery outcome", "2026-06-02T09:02:00.000Z", { outcome: "second" }));
+  await store.putEvent(event("proof-9", "proof of delivery", "2026-06-02T09:03:00.000Z", { evidenceReference: "note" }));
   const results = await reconcileOfflineEvents({
     store,
     submit: async () => ({
@@ -61,13 +67,19 @@ test("an already-applied event converges and a conflict stays visible", async ()
       results: [
         { clientEventId: "outcome-1", result: "already applied" },
         { clientEventId: "outcome-2", result: "conflict", errorCode: "lifecycle_conflict" },
+        { clientEventId: "proof-9", result: "validation rejected" },
       ],
     }),
     refresh: async () => undefined,
     readRoutes: async () => ({ ok: true, trips: [trip] }),
   });
   assert.equal(results[0]?.state, "Synced");
+  assert.equal(results[0]?.attention, "already synchronized");
   assert.equal(results[1]?.state, "Failed / Needs Attention");
+  assert.equal(results[1]?.attention, "conflict requiring attention");
+  assert.equal(results[1]?.targetId, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
+  assert.equal(results[2]?.attention, "rejected");
+  assert.equal(results[2]?.targetId, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   assert.deepEqual((await store.listEvents()).find((item) => item.clientEventId === "outcome-2")?.payload, { outcome: "second" });
 });
 
@@ -99,6 +111,14 @@ test("a missing batch result is not treated as success", async () => {
     readRoutes: async () => ({ ok: true, trips: [trip] }),
   });
   assert.equal(results[0]?.state, "Pending Sync");
+  assert.equal(results[0]?.attention, "retrying");
+});
+
+test("loader screens do not gain an offline mutation", () => {
+  const root = resolve(import.meta.dirname, "..");
+  const source = readFileSync(resolve(root, "app/loader/page.tsx"), "utf8");
+  assert.equal(source.includes("offline-reconciliation"), false);
+  assert.equal(source.includes("recordOfflineAction"), false);
 });
 
 function event(
