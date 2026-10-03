@@ -50,6 +50,38 @@ A Store Manager confirms one receipt for a delivered order at an assigned outlet
 
 A requested order status change goes through the transition guard before the order transition writes it. The guard reads the stored order and rejects a missing actor, the wrong role, the wrong outlet or assignment, a skipped or backward step, and a missing trip stop, loading record, or delivery record. A client status, role, or actor id is not used. The guard does not calculate a plan, create an exception, or rewrite a delivery. No business audit action name is approved, so these checks do not invent one.
 
+## API contracts
+
+These contracts are the request and response allowlists for the core API. They do not register routes. A request with an unknown field is `invalid_input`. Dates are `YYYY-MM-DD`. Instants in responses are UTC timestamps. Quantities stay in order units, kilograms, and cubic metres. The authenticated actor is not a request field. Authorization stays in the Phase 3 checks and the domain operation.
+
+| Request | Accepted fields | Response | Domain operation |
+| --- | --- | --- | --- |
+| `POST /api/auth/login` | `loginIdentifier`, `password` | `id`, `loginIdentifier`, `displayName`, `role` | existing login |
+| `GET /api/auth/me` | none | same user fields | existing current user |
+| `POST /api/auth/logout` | none | `{ "status": "ok" }` | existing logout |
+| `GET /api/orders` | optional `orderDate`, `status`, `outletId` | order fields below | order read |
+| `POST /api/orders` | `deliveryId`, `orderDate`, `outletId`, `tempRequirement`, `orderUnits`, `orderWeightKg`, `orderVolumeM3`; optional `brand`, `district`, `depot` | order fields below | `createOrder` |
+| `GET /api/orders/:id` | path id | order fields below | `getOrder` |
+| `POST /api/orders/:id/submit` | none | order fields below | `submitOrder` |
+| `POST /api/planning/run` | `operationalDate` | `operationalDate`, trips, deferrals | planning boundary, not a client allocation |
+| `GET /api/planning/:date` | path date | same planning result | planning read |
+| `GET /api/trips/:id` | path id | trip and stops below | trip read |
+| `POST /api/trips/:id/confirm` | none | same trip | `confirmTrip` |
+| `GET /api/deferrals` | optional `orderId`, `reason` | deferral fields below | deferral read |
+| `GET /api/loading/tasks` | none | loading fields below | loading read for the assigned loader |
+| `POST /api/loading/:id/verify` | `loadedUnits` | loading fields below | `verifyLoading`; path id becomes `tripStopId` |
+| `POST /api/loading/:id/shortfall` | `shortfallUnits`; optional `details` | loading fields below | `reportShortfall`; path id becomes `tripStopId` |
+| `GET /api/driver/routes` | none | trip and stops below | trip read for the assigned driver |
+| `POST /api/deliveries/:id/outcome` | `outcome`; optional `deliveredUnits`, `notes` | delivery fields below | `recordDelivery`; path id becomes `tripStopId` |
+| `POST /api/deliveries/:id/pod` | `evidenceReference` | proof fields below | `recordProof`; path id becomes `tripStopId` |
+| `POST /api/orders/:id/receipt` | `result`; optional `issueDetails` | receipt fields below | `confirmReceipt`; the order path selects the delivery |
+| `GET /api/exceptions` | none | exception fields below | exception read |
+| `POST /api/exceptions` | `category`; optional `details` | exception fields below | `recordException` |
+
+Order response fields are `id`, `deliveryId`, `orderDate`, `outletId`, `outletCode`, `brand`, `district`, `depot`, `status`, `tempRequirement`, `orderUnits`, `orderWeightKg`, `orderVolumeM3`, and `submittedAt`. Trip response fields are `id`, `routeId`, `operationalDate`, `vehicleId`, `depot`, `tripNumber`, `status`, and stops with `id`, `tripId`, `orderId`, `sequence`, and `plannedArrival`. There is no route leg. Deferral fields are `id`, `orderId`, `reason`, and `reportedAt`. The reason is one of `NO_CAPACITY`, `NO_REEFER`, `VAN_ACCESS`, `WINDOW_CONFLICT`, `DEPOT_MISMATCH`, and `TIME_BUDGET`. Loading fields are `id`, `tripStopId`, `loaderUserId`, `expectedUnits`, `loadedUnits`, `shortfallUnits`, `verifiedAt`, `shortfallReportedAt`, and `details`. Delivery fields are `id`, `tripStopId`, `driverUserId`, `deliveredAt`, `outcome`, `deliveredUnits`, and `notes`. Proof fields are `id`, `deliveryRecordId`, `evidenceReference`, and `capturedAt`. Receipt fields are `id`, `deliveryRecordId`, `confirmedAt`, `result`, and `issueDetails`. Exception fields are `id`, `category`, `details`, and `occurredAt`.
+
+Client requests cannot set an actor, role, status, planning result, vehicle, trip, stop sequence, loader, driver, or receipt confirmation. Optional outlet context on order creation must still match the stored outlet. A list filter does not grant access to another outlet or assignment. Responses do not include a password hash, session, cookie, or CSRF token. Sync batch contracts are not part of this boundary.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
