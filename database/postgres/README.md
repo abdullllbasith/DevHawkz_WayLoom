@@ -61,7 +61,12 @@ npm run build --workspace @wayloom/api
 npm run gate:setup-local --workspace @wayloom/api
 ```
 
-That migrates the test database, loads competition CSVs, and runs `seed:scenario` using `TEST_DATABASE_URL`. Start the API with `DATABASE_URL` set to the same local test URL (or use `seed:local` for seed only), then run `npm run gate:smoke-local --workspace @wayloom/api` against `http://127.0.0.1:4000`.
+That migrates the test database, loads competition CSVs, and runs `seed:scenario` using `TEST_DATABASE_URL`. Development runtime configuration accepts `wayloom_development` or a remote `postgres` database, so the gate API must start with `NODE_ENV=test` and the same local test URL:
+
+```text
+npm run gate:start-api-local --workspace @wayloom/api
+npm run gate:smoke-local --workspace @wayloom/api
+```
 
 ## Reset
 

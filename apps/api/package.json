@@ -17,6 +17,7 @@
     "prisma:reset-test": "node scripts/prisma-database.mjs reset-test test",
     "gate:setup-local": "node scripts/gate-local-setup.mjs test",
     "gate:smoke-local": "node scripts/gate-local-smoke.mjs",
+    "gate:start-api-local": "node scripts/gate-start-api-local.mjs test",
     "gate:setup-local:dev": "node scripts/gate-local-setup.mjs development",
     "seed:local": "node scripts/local-database.mjs test dist/seed/cli.js",
     "seed:local:dev": "node scripts/local-database.mjs development dist/seed/cli.js",
