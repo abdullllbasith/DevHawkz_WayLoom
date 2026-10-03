@@ -44,6 +44,8 @@ A Driver records one delivery for a dispatched stop on the vehicle assigned to t
 
 A Dispatcher records a deferral when a confirmed order has no trip stop. The reason is one of the six approved planning reasons. The order moves to `Deferred` through the order transition. A later different reason is appended. Earlier deferral rows stay in place, and an order that already has a trip stop is not deferred. The order quantity and outlet context stay unchanged. No business audit action name is approved, so these writes do not invent one.
 
+A Dispatcher records an exception as its own row. The table has no order, trip, loading, delivery, or receipt link, so a client cannot attach one. Store Manager, Loader, and Driver are denied. The write does not change the order, trip, delivery, receipt, or deferral. No severity or exception status is stored. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
