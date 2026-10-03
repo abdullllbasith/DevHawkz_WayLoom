@@ -31,7 +31,7 @@ export function storeStatusCounts(orders: readonly StoreOrder[]): { status: stri
   return [...counts.entries()].map(([status, count]) => ({ status, count }));
 }
 
-function readStoreOrder(value: unknown): StoreOrder | null {
+export function readStoreOrder(value: unknown): StoreOrder | null {
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
   if (typeof record.id !== "string" || typeof record.deliveryId !== "string" || typeof record.status !== "string") return null;

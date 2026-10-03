@@ -129,7 +129,7 @@ export default function CreateOrderPage() {
         Submit order
       </button>
       {message === null ? null : <p>{message}</p>}
-      {createdId === null ? null : <p><Link href="/store/orders">Open order tracking</Link></p>}
+      {createdId === null ? null : <p><Link href={`/store/orders/${createdId}`}>Open this order</Link></p>}
     </section>
   );
 }
