@@ -38,6 +38,7 @@ test("primary navigation resolves to the submitted dispatcher routes", () => {
   assert.equal(activeDispatcherHref("/dispatcher/planning"), "/dispatcher/planning");
   assert.equal(activeDispatcherHref("/dispatcher/allocation-confirmation"), "/dispatcher/planning");
   assert.equal(activeDispatcherHref("/dispatcher/deferrals"), "/dispatcher/planning");
+  assert.equal(activeDispatcherHref("/dispatcher/exceptions"), "/dispatcher/workflow");
   assert.equal(activeDispatcherHref("/dispatcher/vehicles"), "/dispatcher/vehicles");
   assert.equal(activeDispatcherHref("/dispatcher/routes"), "/dispatcher/routes");
   assert.equal(activeDispatcherHref("/dispatcher/routes/route-1"), "/dispatcher/routes");

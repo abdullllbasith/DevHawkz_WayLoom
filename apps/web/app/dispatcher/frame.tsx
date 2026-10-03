@@ -25,6 +25,7 @@ export function DispatcherFrame({
   const isRouteDetailPage = pathname.startsWith("/dispatcher/routes/") && pathname !== "/dispatcher/routes";
   const isRoutesPage = pathname === "/dispatcher/routes";
   const isDeferralsPage = pathname.startsWith("/dispatcher/deferrals");
+  const isExceptionsPage = pathname.startsWith("/dispatcher/exceptions");
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
@@ -56,6 +57,11 @@ export function DispatcherFrame({
     breadcrumb = "Dispatcher > Deferral Management";
     title = "Deferral Management";
     subtitle = "Inspect unallocated orders, planning constraints, and authoritative deferral reasons";
+    dateText = "Operational date";
+  } else if (isExceptionsPage) {
+    breadcrumb = "Dispatcher > Operational Exceptions";
+    title = "Operational Exceptions";
+    subtitle = "Inspect, track, and record operational exceptions across dispatch and delivery";
     dateText = "Operational date";
   } else if (isRoutesPage) {
     breadcrumb = "Dispatcher > Routes > Route Management";

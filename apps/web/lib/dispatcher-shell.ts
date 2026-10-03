@@ -56,6 +56,9 @@ export function activeDispatcherHref(pathname: string): string | null {
   ) {
     return "/dispatcher/planning";
   }
+  if (pathname === "/dispatcher/exceptions" || pathname.startsWith("/dispatcher/exceptions/")) {
+    return "/dispatcher/workflow";
+  }
   const match = dispatcherNavigation.find((item) => item.href !== "/dispatcher" && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
   return match?.href ?? null;
 }

@@ -19,3 +19,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: { code: "connection_error" } }, { status: 502 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  const origin = resolveApiOrigin(process.env.API_ORIGIN, process.env.NODE_ENV);
+  if (!origin) {
+    return NextResponse.json({ error: { code: "service_unavailable" } }, { status: 503 });
+  }
+
+  const cookie = request.headers.get("cookie") ?? "";
+  const csrf = request.headers.get("x-wayloom-csrf") ?? "";
+  try {
+    const body: unknown = await request.json().catch(() => ({}));
+    const apiResponse = await fetch(`${origin}/api/exceptions`, {
+      method: "POST",
+      headers: {
+        cookie,
+        "content-type": "application/json",
+        "x-wayloom-csrf": csrf,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await apiResponse.json().catch(() => ({}));
+    return NextResponse.json(data, { status: apiResponse.status });
+  } catch {
+    return NextResponse.json({ error: { code: "connection_error" } }, { status: 502 });
+  }
+}
