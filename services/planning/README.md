@@ -2,7 +2,7 @@
 
 WayLoom Python FastAPI planning service foundation.
 
-This directory is the executable planning service. `packages/planning/` remains the separate TypeScript contracts package. Planning algorithms, OR-Tools, AI, and database access are not implemented. This service is not a production deployment.
+This directory is the executable planning service. `packages/planning/` remains the separate TypeScript contract, version 1. Planning algorithms, OR-Tools, AI, and database access are not implemented. This service does not persist planning results. It is not a production deployment.
 
 ## Tooling
 

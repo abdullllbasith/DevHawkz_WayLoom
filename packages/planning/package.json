@@ -10,5 +10,8 @@
       "default": "./dist/index.js"
     }
   },
-  "types": "./dist/index.d.ts"
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "tsc -p tsconfig.json --pretty false && node --test dist/contract.test.js"
+  }
 }
