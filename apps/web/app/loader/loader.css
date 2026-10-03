@@ -1,0 +1,133 @@
+.loader-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.loader-top,
+.loader-heading,
+.loader-main {
+  padding: 16px;
+}
+
+.loader-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.loader-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.loader-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: #0f172a;
+}
+
+.loader-identity {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #475569;
+}
+
+.loader-top .dispatcher-logout {
+  margin-left: auto;
+}
+
+.loader-heading h1 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+.loader-crumb {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.loader-main {
+  padding-bottom: 88px;
+}
+
+.loader-empty,
+.loader-denied {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.loader-empty p,
+.loader-denied p {
+  color: #475569;
+}
+
+.loader-nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.loader-nav a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.loader-nav a[aria-current="page"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+@media (min-width: 768px) {
+  .loader-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .loader-nav {
+    position: static;
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    display: flex;
+    flex-direction: column;
+    border-top: 0;
+    border-right: 1px solid #e2e8f0;
+    padding: 16px;
+  }
+
+  .loader-top,
+  .loader-heading,
+  .loader-main {
+    grid-column: 2;
+  }
+
+  .loader-main {
+    padding-bottom: 24px;
+  }
+}
