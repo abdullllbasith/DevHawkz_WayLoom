@@ -4,6 +4,7 @@
  */
 import { hardConstraints, type DeferralReason, type HardConstraintId } from "./contract.js";
 import { addDecimal, compareDecimal, divideDecimalCeil } from "./decimal.js";
+import { tripTimeForOrders } from "./trip-time.js";
 import { validatePlanningInput } from "./validate.js";
 import type { PlanningInput, PlanningOrder, PlanningVehicle } from "./contract.js";
 
@@ -136,20 +137,9 @@ function windows(input: PlanningInput, candidate: PlanningCandidate): Constraint
 }
 
 function tripTime(input: PlanningInput, orders: readonly PlanningOrder[]): ConstraintEvaluation {
-  const first = orders[0];
-  if (first === undefined) return row("trip_time", "invalid", null, null);
-  const travel = input.travel.find((item) => item.depot === first.depot && item.district === first.district);
-  if (travel === undefined) return row("trip_time", "invalid", null, null);
-  let allowance = "0";
-  for (const order of orders) {
-    const outlet = input.outlets.find((item) => item.id === order.outletId);
-    const rowMatch = input.serviceAllowances.find((item) => item.brand === outlet?.brand && item.dockType === outlet?.dockType);
-    if (outlet === undefined || rowMatch === undefined) return row("trip_time", "invalid", null, null);
-    allowance = addDecimal(allowance, rowMatch.serviceAllowanceMin);
-  }
-  const between = orders.length <= 1 ? "0" : multiplyDecimal(travel.interStopFreeflowMin, orders.length - 1);
-  const measured = addDecimal(addDecimal(travel.depotToDistrictFreeflowMin, between), allowance);
-  return row("trip_time", "withheld", measured, null);
+  const calculated = tripTimeForOrders(input, orders);
+  if (!calculated.ok) return row("trip_time", "invalid", null, null);
+  return row("trip_time", "withheld", calculated.tripMinutes, null);
 }
 
 function fuel(vehicle: PlanningVehicle, distance: string | null): ConstraintEvaluation {
@@ -207,12 +197,6 @@ function parseCandidate(value: unknown): PlanningCandidate | null {
     tripDistanceKm: distance as string | null,
     existingTripCount: existing as number | null,
   };
-}
-
-function multiplyDecimal(value: string, times: number): string {
-  let total = "0";
-  for (let index = 0; index < times; index += 1) total = addDecimal(total, value);
-  return total;
 }
 
 function clockSeconds(value: string): number | null {

@@ -5,6 +5,12 @@ export function addDecimal(left: string, right: string): string {
   return fromScaled(scaled(left, scale) + scaled(right, scale), scale);
 }
 
+export function multiplyDecimal(value: string, times: number): string {
+  let total = "0";
+  for (let index = 0; index < times; index += 1) total = addDecimal(total, value);
+  return total;
+}
+
 export function compareDecimal(left: string, right: string): number {
   const scale = Math.max(fractionLength(left), fractionLength(right));
   const a = scaled(left, scale);

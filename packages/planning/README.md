@@ -12,4 +12,4 @@ The cutoff clock is `16:00:00`. `submitted_at < cutoff_at` is eligible for the n
 
 Deferral reasons stay `NO_CAPACITY`, `NO_REEFER`, `VAN_ACCESS`, `WINDOW_CONFLICT`, `DEPOT_MISMATCH`, and `TIME_BUDGET`. A weekly fuel failure is the `weekly_fuel` constraint with no deferral reason. The Dispatcher confirms a result. AI does not override a hard constraint.
 
-Scenario fixtures in this package are test inputs. They are not production seed data. `validatePlanningInput` checks that payload and does not allocate orders or calculate fuel. `evaluateFeasibility` checks one supplied candidate against the hard constraints. Trip minutes are measured with the approved formula. No operational minute cap is applied.
+Scenario fixtures in this package are test inputs. They are not production seed data. `validatePlanningInput` checks that payload and does not allocate orders or calculate fuel. `evaluateFeasibility` checks one supplied candidate against the hard constraints. `calculateTripTime` is the only trip-minute formula. No operational minute cap is applied, so feasibility still marks that constraint withheld.
