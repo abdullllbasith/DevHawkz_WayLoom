@@ -68,7 +68,7 @@ export function createApp(options: AppOptions) {
           return;
         }
       }
-      const businessRoute = businessRoutes.find((route) => route.method === method && route.path === pathname);
+      const businessRoute = findBusinessRoute(businessRoutes, method, pathname);
       if (businessRoute) {
         await enforceBusinessRoute({
           response,
@@ -79,6 +79,7 @@ export function createApp(options: AppOptions) {
           now: now(),
           assignedOutletIds,
           route: businessRoute,
+          request,
           log: options.log,
           audit: options.audit,
         });
@@ -267,6 +268,17 @@ export function createApp(options: AppOptions) {
       }
     }
   };
+}
+
+function findBusinessRoute(
+  routes: readonly BusinessRoute[],
+  method: string,
+  pathname: string,
+): BusinessRoute | undefined {
+  return (
+    routes.find((route) => route.method === method && route.matchPath === undefined && route.path === pathname) ??
+    routes.find((route) => route.method === method && route.matchPath?.(pathname) === true)
+  );
 }
 
 function parseCredentials(body: string | null): { loginIdentifier: string; password: string } | null {

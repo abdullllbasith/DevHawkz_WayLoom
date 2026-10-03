@@ -1,4 +1,4 @@
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { sendError } from "../errors.js";
 import type { Logger } from "../log.js";
 import { writeSecurityAudit, type SecurityAuditWriter } from "./audit.js";
@@ -33,8 +33,13 @@ export type BusinessRoute = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   allowedRoles: readonly OperationalRoleName[];
+  matchPath?: (pathname: string) => boolean;
   authorizeObject?: (context: RequestSecurityContext) => ObjectDecision | Promise<ObjectDecision>;
-  handle: (context: RequestSecurityContext, response: ServerResponse) => Promise<void> | void;
+  handle: (
+    context: RequestSecurityContext,
+    response: ServerResponse,
+    request: IncomingMessage,
+  ) => Promise<void> | void;
 };
 
 export function isPublicRoute(method: string, path: string): boolean {
@@ -64,6 +69,7 @@ export async function enforceBusinessRoute(input: {
   now: Date;
   assignedOutletIds: OutletAssignmentLookup;
   route: BusinessRoute;
+  request: IncomingMessage;
   log: Logger;
   audit?: SecurityAuditWriter;
 }): Promise<void> {
@@ -142,7 +148,7 @@ export async function enforceBusinessRoute(input: {
       return;
     }
   }
-  await input.route.handle(context, input.response);
+  await input.route.handle(context, input.response, input.request);
 }
 
 function isOperationalRole(role: string): role is OperationalRoleName {

@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { coreRoutes } from "./api/core-routes.js";
+import { prismaCore } from "./api/prisma-core.js";
 import { createApp } from "./app.js";
 import { loadConfig, type ApiConfig } from "./config.js";
 import { getPrismaClient } from "./db.js";
@@ -31,6 +33,7 @@ function start(config: ApiConfig): void {
       loginRateLimit: createLoginRateLimiter(config.loginRateLimit),
       httpSecurity: config.httpSecurity,
       audit: prismaSecurityAudit(prisma),
+      businessRoutes: coreRoutes({ ...prismaCore(prisma), now: () => new Date() }),
     }),
   );
   let closing = false;

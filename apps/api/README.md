@@ -2,7 +2,7 @@
 
 WayLoom Node.js + TypeScript API foundation.
 
-The server uses the Node.js `http` module. No second backend framework is added. Business endpoints, authentication, and planning calls are not implemented. Prisma is configured for PostgreSQL, and the WayLoom domain schema is not defined yet.
+The server uses the Node.js `http` module. No second backend framework is added. Authentication stays on the Phase 3 routes. The core order, trip, loading, delivery, receipt, deferral, and exception routes call the domain modules and return the API contracts. `POST /api/planning/run` does not calculate a plan: the planning service has no planner yet, so that route and `GET /api/planning/:date` return the trips and deferrals already stored for the date.
 
 ## Commands
 
@@ -81,6 +81,8 @@ These contracts are the request and response allowlists for the core API. They d
 Order response fields are `id`, `deliveryId`, `orderDate`, `outletId`, `outletCode`, `brand`, `district`, `depot`, `status`, `tempRequirement`, `orderUnits`, `orderWeightKg`, `orderVolumeM3`, and `submittedAt`. Trip response fields are `id`, `routeId`, `operationalDate`, `vehicleId`, `depot`, `tripNumber`, `status`, and stops with `id`, `tripId`, `orderId`, `sequence`, and `plannedArrival`. There is no route leg. Deferral fields are `id`, `orderId`, `reason`, and `reportedAt`. The reason is one of `NO_CAPACITY`, `NO_REEFER`, `VAN_ACCESS`, `WINDOW_CONFLICT`, `DEPOT_MISMATCH`, and `TIME_BUDGET`. Loading fields are `id`, `tripStopId`, `loaderUserId`, `expectedUnits`, `loadedUnits`, `shortfallUnits`, `verifiedAt`, `shortfallReportedAt`, and `details`. Delivery fields are `id`, `tripStopId`, `driverUserId`, `deliveredAt`, `outcome`, `deliveredUnits`, and `notes`. Proof fields are `id`, `deliveryRecordId`, `evidenceReference`, and `capturedAt`. Receipt fields are `id`, `deliveryRecordId`, `confirmedAt`, `result`, and `issueDetails`. Exception fields are `id`, `category`, `details`, and `occurredAt`.
 
 Client requests cannot set an actor, role, status, planning result, vehicle, trip, stop sequence, loader, driver, or receipt confirmation. Optional outlet context on order creation must still match the stored outlet. A list filter does not grant access to another outlet or assignment. Responses do not include a password hash, session, cookie, or CSRF token. Sync batch contracts are not part of this boundary.
+
+The running API registers these routes behind the existing session, role, and CSRF checks. A resource id is looked up by the domain. The handler does not write order status itself and does not open its own database transaction.
 
 ## Prisma
 
