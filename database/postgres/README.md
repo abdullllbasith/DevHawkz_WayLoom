@@ -52,6 +52,17 @@ Pass the password through the client environment or a prompt. Do not put it in t
 
 Repeat the check with `TEST_DATABASE_URL` against `wayloom_test`.
 
+## Phase 6 local gate data
+
+When `.env` keeps a remote `DATABASE_URL` for day-to-day work, seed and import still require `127.0.0.1` and `wayloom_test` or `wayloom_development`. From the repository root, with Postgres running:
+
+```text
+npm run build --workspace @wayloom/api
+npm run gate:setup-local --workspace @wayloom/api
+```
+
+That migrates the test database, loads competition CSVs, and runs `seed:scenario` using `TEST_DATABASE_URL`. Start the API with `DATABASE_URL` set to the same local test URL (or use `seed:local` for seed only), then run `npm run gate:smoke-local --workspace @wayloom/api` against `http://127.0.0.1:4000`.
+
 ## Reset
 
 Reset one database at a time. The script refuses a missing or unknown target, so it cannot guess and it cannot reset both databases at once.
