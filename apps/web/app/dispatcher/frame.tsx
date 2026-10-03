@@ -22,7 +22,8 @@ export function DispatcherFrame({
   const isOrdersPage = pathname.startsWith("/dispatcher/orders");
   const isPlanningPage = pathname.startsWith("/dispatcher/planning");
   const isAllocationConfirmationPage = pathname.startsWith("/dispatcher/allocation-confirmation");
-  const isRoutesPage = pathname.startsWith("/dispatcher/routes");
+  const isRouteDetailPage = pathname.startsWith("/dispatcher/routes/") && pathname !== "/dispatcher/routes";
+  const isRoutesPage = pathname === "/dispatcher/routes";
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
@@ -44,6 +45,11 @@ export function DispatcherFrame({
     breadcrumb = "Dispatcher > Orders > All Orders";
     title = "Orders";
     subtitle = "View orders for delivery planning.";
+    dateText = "Operational date";
+  } else if (isRouteDetailPage) {
+    breadcrumb = "Dispatcher > Routes > Route Details";
+    title = "Route Details";
+    subtitle = "Inspect route assignment, ordered stops, and operational status";
     dateText = "Operational date";
   } else if (isRoutesPage) {
     breadcrumb = "Dispatcher > Routes > Route Management";

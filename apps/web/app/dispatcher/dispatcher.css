@@ -3675,6 +3675,45 @@ html:has(.dispatcher-shell) body {
   line-height: 1.4;
 }
 
+.routes-details-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.routes-details-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.routes-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.routes-details-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.routes-details-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.routes-details-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 @media (max-width: 1200px) {
   .routes-main-grid {
     grid-template-columns: 1fr;
