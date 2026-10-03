@@ -80,6 +80,7 @@ export default function DriverStopDetailsPage() {
             <p>Arrival: {stop.plannedArrival ?? "—"}</p>
             <p>Delivery status is not shown until an outcome is recorded.</p>
             <Link href={`/driver/outcome?stop=${encodeURIComponent(stop.id)}`}>Record outcome</Link>
+            <Link href={`/driver/pod?stop=${encodeURIComponent(stop.id)}`}>Add proof</Link>
           </li>
         ))}
       </ol>
