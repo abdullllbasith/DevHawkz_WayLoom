@@ -35,8 +35,10 @@ export function assertRuntimeDatabaseUrl(
     }
     return;
   }
-  if (!localHosts.some((host) => host === url.hostname) || database !== "wayloom_development") {
-    throw new Error("Invalid configuration: development DATABASE_URL must use the local wayloom_development database.");
+  const localDevelopment = localHosts.some((host) => host === url.hostname) && database === "wayloom_development";
+  const remoteDevelopment = !localHosts.some((host) => host === url.hostname) && database === "postgres" && !isPlaceholderPassword(url.password);
+  if (!localDevelopment && !remoteDevelopment) {
+    throw new Error("Invalid configuration: development DATABASE_URL must use the local wayloom_development database or a remote postgres database.");
   }
 }
 
