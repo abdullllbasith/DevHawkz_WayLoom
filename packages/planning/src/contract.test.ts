@@ -90,6 +90,8 @@ test("a planning result keeps one whole order, an unallocated order, and no inve
   assert.equal(parsePlanningResult({ ...result.value, solverStatus: null }).ok, true);
   assert.equal(parsePlanningResult({ ...result.value, solverStatus: "OPTIMAL" }).ok, false);
   assert.equal(parsePlanningResult({ ...result.value, solverStatus: "NOT_RUN" }).ok, false);
+  assert.equal(parsePlanningResult({ ...result.value, solverStatus: "FEASIBLE" }).ok, false);
+  assert.equal(parsePlanningResult({ ...result.value, solverStatus: "SUBOPTIMAL" }).ok, false);
   assert.equal(parsePlanningResult({ ...result.value, unallocated: [{ ...result.value.unallocated[1], deferralReason: "FUEL_QUOTA" }] }).ok, false);
   assert.equal(parsePlanningFailure({ contractVersion: "1", status: "validation_failure" }).ok, true);
   assert.equal(parsePlanningFailure({ contractVersion: "1", status: "service_failure", message: "select * from sessions" }).ok, false);

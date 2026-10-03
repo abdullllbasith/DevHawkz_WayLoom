@@ -27,6 +27,8 @@ export { validatePlanningInput, validationCategories } from "./validate.js";
 export type { PlanningValidationFailure, PlanningValidationResult, ValidationCategory } from "./validate.js";
 export { validateVehicleFuel, validateWeeklyFuel } from "./fuel.js";
 export type { FuelContext, FuelFailureCode, FuelResult, FuelTripInput } from "./fuel.js";
+export { assemblePlanningResult } from "./result.js";
+export type { PlanningRun } from "./result.js";
 export { explainAllocations } from "./deferral-reason.js";
 export type { AllocationExplanation, DeferralExplanationResult } from "./deferral-reason.js";
 export { constructTrips } from "./construct.js";
