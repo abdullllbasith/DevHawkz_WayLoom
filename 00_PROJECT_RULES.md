@@ -300,7 +300,7 @@ Every hard constraint must have an explicit validator.
 
 Do not hide a hard constraint inside an LLM prompt.
 
-No optimization objective is approved. OR-Tools remains an optional approved technology, not a required dependency. Do not optimize fuel, distance, vehicle count, utilization, coverage, Fresh or chilled priority, FIFO, order size, brand, district, or any other business priority. Deterministic feasibility remains authoritative. The Dispatcher confirms a plan. AI remains decision support. An objective must not change feasibility, cutoff, trip time, fuel, or validation.
+No optimization objective is approved. OR-Tools remains an optional approved technology, not a required dependency. Do not optimize fuel, distance, vehicle count, utilization, coverage, Fresh or chilled priority, FIFO, order size, brand, district, or any other business priority. Deterministic feasibility remains authoritative. The Dispatcher confirms a plan. AI remains decision support. An objective must not change feasibility, cutoff, trip time, fuel, or validation. `solverStatus` is optional. When no solver is used, the planning result omits it or sets it to null and does not claim a solver outcome. Do not use `NOT_RUN`, `FEASIBLE`, `OPTIMAL`, or `SUBOPTIMAL`. A successful deterministic result remains `result`. `validation_failure` and `service_failure` keep their meanings. Solver status must not affect feasibility, allocation validity, deferral reasoning, or Dispatcher confirmation.
 
 ---
 

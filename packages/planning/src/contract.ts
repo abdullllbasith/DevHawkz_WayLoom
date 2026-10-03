@@ -206,6 +206,8 @@ export type PlanningResult = {
   operationalDate: string;
   trips: PlanningTrip[];
   unallocated: UnallocatedOrder[];
+  /** Absent or null on input. A parsed result keeps null and does not name a solver outcome. */
+  solverStatus: null;
 };
 
 export type PlanningFailure = {
@@ -266,8 +268,9 @@ export function parsePlanningInput(value: unknown): ContractResult<PlanningInput
 
 export function parsePlanningResult(value: unknown): ContractResult<PlanningResult> {
   if (containsSecret(value) || !isRecord(value)) return invalid();
-  const record = allow(value, ["contractVersion", "status", "operationalDate", "trips", "unallocated"]);
-  if (record === null || record.contractVersion !== PLANNING_CONTRACT_VERSION || record.status !== "result") return invalid();
+  if (!resultKeys(value)) return invalid();
+  const record = value;
+  if (record.contractVersion !== PLANNING_CONTRACT_VERSION || record.status !== "result") return invalid();
   const operationalDate = dateOnly(record.operationalDate);
   const trips = parseList(record.trips, parseTrip);
   const unallocated = parseList(record.unallocated, parseUnallocated);
@@ -278,7 +281,7 @@ export function parsePlanningResult(value: unknown): ContractResult<PlanningResu
   if (!sameOrder(unallocated, orderedUnallocated, (item) => item.deliveryId)) return invalid();
   return {
     ok: true,
-    value: { contractVersion: PLANNING_CONTRACT_VERSION, status: "result", operationalDate, trips: orderedTrips, unallocated: orderedUnallocated },
+    value: { contractVersion: PLANNING_CONTRACT_VERSION, status: "result", operationalDate, trips: orderedTrips, unallocated: orderedUnallocated, solverStatus: null },
   };
 }
 
@@ -640,6 +643,14 @@ function parseList<T>(value: unknown, parse: (item: unknown) => T | null): T[] |
 
 function sortBy<T>(items: readonly T[], key: (item: T) => string): T[] {
   return [...items].sort((left, right) => key(left).localeCompare(key(right)));
+}
+
+function resultKeys(value: Record<string, unknown>): boolean {
+  const required = ["contractVersion", "status", "operationalDate", "trips", "unallocated"];
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== "solverStatus" && !required.includes(key))) return false;
+  if (required.some((key) => !keys.includes(key))) return false;
+  return !("solverStatus" in value) || value.solverStatus === null;
 }
 
 function allow(value: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> | null {
