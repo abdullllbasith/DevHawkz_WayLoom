@@ -3,7 +3,8 @@
  * This does not choose routes, allocate a plan, or persist a result.
  */
 import { hardConstraints, type DeferralReason, type HardConstraintId } from "./contract.js";
-import { addDecimal, compareDecimal, divideDecimalCeil } from "./decimal.js";
+import { addDecimal, compareDecimal } from "./decimal.js";
+import { validateWeeklyFuel } from "./fuel.js";
 import { tripTimeForOrders } from "./trip-time.js";
 import { validatePlanningInput } from "./validate.js";
 import type { PlanningInput, PlanningOrder, PlanningVehicle } from "./contract.js";
@@ -143,11 +144,15 @@ function tripTime(input: PlanningInput, orders: readonly PlanningOrder[]): Const
 }
 
 function fuel(vehicle: PlanningVehicle, distance: string | null): ConstraintEvaluation {
-  if (distance === null || !/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(distance)) return row("weekly_fuel", "invalid", null, vehicle.weeklyFuelQuotaL);
-  const used = divideDecimalCeil(distance, vehicle.kmPerL);
-  const projected = addDecimal(vehicle.existingWeeklyFuelL, used);
-  const status = compareDecimal(projected, vehicle.weeklyFuelQuotaL) <= 0 ? "feasible" : "infeasible";
-  return row("weekly_fuel", status, projected, vehicle.weeklyFuelQuotaL);
+  const calculated = validateWeeklyFuel({
+    vehicleId: vehicle.vehicleId,
+    kmPerL: vehicle.kmPerL,
+    weeklyFuelQuotaL: vehicle.weeklyFuelQuotaL,
+    existingWeeklyFuelL: vehicle.existingWeeklyFuelL,
+    trips: [{ tripDistanceKm: distance }],
+  });
+  if (!calculated.ok) return row("weekly_fuel", "invalid", null, vehicle.weeklyFuelQuotaL);
+  return row("weekly_fuel", calculated.status, calculated.projectedWeeklyFuelL, calculated.weeklyFuelQuotaL);
 }
 
 function tripLimit(existing: number | null): ConstraintEvaluation {
