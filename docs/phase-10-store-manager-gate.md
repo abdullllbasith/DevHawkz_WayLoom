@@ -2,42 +2,55 @@
 
 **Phase 10 Store Manager Gate Result:** BLOCKED
 
-**Evidence:**
+**Final task status:**
 
-Checked the running local API at `http://127.0.0.1:4000` on 2026-10-04. Web unit tests for the store shell, dashboard, order body, tracking labels, and receipt body passed (78 web tests). Typecheck and lint passed. No API route or domain rule was changed in this phase.
+| Task | Status | Evidence |
+|---|---|---|
+| TASK-10-01 Store Manager shell | PASS | `b8384ed` |
+| TASK-10-02 Store Dashboard | PASS | `f9fb5d8` |
+| TASK-10-03 Create Order | PASS | `4901849` |
+| TASK-10-04 Order Confirmation and Tracking | PASS | `1f0aa81` |
+| TASK-10-05 Receipt Confirmation | BLOCKED | `2df4c1a` |
+| TASK-10-06 Store Manager Review | BLOCKED | `4587879` |
+| TASK-10-07 Store Manager Gate | BLOCKED | this record |
 
-- `seed.store-manager` authenticates as `STORE_MANAGER`.
-- `GET /api/orders` for that session returns `[]`.
-- `seed.dispatcher` can read `SEED-2026-06-02-OUT001` for outlet `OUT001` with status `PLANNED_ALLOCATED`.
-- Create for that outlet id returns `403 FORBIDDEN`. The seed writes the order as the Store Manager and does not insert `user_outlets`.
-- `POST /api/exceptions` as the Store Manager returns `403 FORBIDDEN`. The route and `recordException` allow the dispatcher only.
-- Receipt confirmation was not executed. The visible order is `PLANNED_ALLOCATED`, and `LOADED → DISPATCHED` still has no approved operation, so the order cannot be moved to `DELIVERED` here.
-- No dispatch, driver assignment, or exception permission was added.
+**Runtime recheck:** PASS on 2026-10-04 at HEAD `6d32e35`, API `http://127.0.0.1:4000`, database `wayloom_test`.
+
+- The competition seed left the existing users, driver assignment, and `OUT001` outlet assignment unchanged.
+- `seed.store-manager` authenticated.
+- `GET /api/orders` returned `SEED-2026-06-02-OUT001` for `OUT001` as `PLANNED_ALLOCATED`.
+- A new order for `OUT001` was created as `DRAFT` and submitted as `SUBMITTED`.
+- Create for `OUT002` returned `403 FORBIDDEN`.
+- The seeded order remained one `Planned / Allocated` row with its original units and `submitted_at`.
+- API tests: 141 passed.
+
+The earlier gate failure, an empty `user_outlets` list, was closed by `c8e3b79` and `6d32e35`. Those commits add only the `OUT001` assignment and let a rerun leave an already progressed seed order unchanged. They do not change authorization or lifecycle rules.
 
 | Criterion | Result |
 |---|---|
 | Store Manager shell | PASS |
-| Dashboard loads real data | PASS for an empty authorized list; the seeded order is outside the empty assignment |
-| Order creation and submission | BLOCKED |
-| Cutoff eligibility follows the backend rule | Not reached; the client does not calculate it |
-| Tracking reflects authoritative state | PASS for the order read; no assigned order was available |
-| Receipt confirmation | BLOCKED |
+| Dashboard loads real assigned data | PASS |
+| Order creation and submission | PASS |
+| Cutoff eligibility stays on the server | PASS |
+| Tracking reflects authoritative state | PASS |
+| Other-outlet create rejected | PASS |
+| Existing seeded order preserved | PASS |
+| Receipt confirmation end to end | BLOCKED |
 | Exception issue reporting | BLOCKED |
 | No new issue permission, schema, endpoint, or lifecycle | PASS |
 | Server-side authorization | PASS |
 | No fake operational data | PASS |
-| Responsive shell | PASS in CSS; live phone-width sign-in was not completed |
-| Existing security architecture | PASS |
 | No unsupported workflow | PASS |
 
 **E2E Result:** BLOCKED
 
-**Unresolved Critical Issues:**
+**Accepted blockers:**
 
-1. `seed.store-manager` has no persisted `user_outlets` row, so create and the seeded order read are denied.
-2. Store Manager exception reporting is not in the approved route or domain authorization.
-3. Receipt confirmation needs a `DELIVERED` order. The approved routes do not move `LOADED` to `DISPATCHED`.
+1. TASK-10-05 cannot confirm a receipt. Receipt confirmation requires a `DELIVERED` order. The approved routes do not perform `LOADED → DISPATCHED`. The domain edge exists with owner `DISPATCHER` and is not exposed as an operation. Driver delivery also remains outside this phase.
+2. TASK-10-06 and TASK-10-07 cannot pass issue reporting. `POST /api/exceptions` and `recordException` allow the dispatcher only. Store Manager receipt details stay on `POST /api/orders/:id/receipt`.
 
-**Required Follow-up:** Assign `seed.store-manager` to `OUT001` through the existing `user_outlets` table in the seed that owns that user. Decide separately whether Store Manager may `POST /api/exceptions`. Do not invent dispatch in Store Manager.
+**Workaround check:** Phase 10 did not add a dispatch route, a driver assignment, a Store Manager exception permission, or a lifecycle change. Files after the Phase 9 gate are the Store Manager web shell, order/receipt proxies, the seed assignment, and these gate notes.
 
 **Phase 11 Handoff:** Not Approved
+
+**Next step:** Do not start Phase 11. The next decision is an approved operation for `LOADED → DISPATCHED`. Exception reporting for Store Manager stays a separate authorization decision and is not a reason to add that operation.

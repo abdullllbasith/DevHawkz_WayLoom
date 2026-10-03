@@ -2,7 +2,7 @@
 
 **Review result:** BLOCKED
 
-The four Store Manager areas exist and stay inside the approved order, tracking, and receipt contracts. The seeded Store Manager cannot complete the journey, and issue reporting through exceptions is not authorized.
+The four Store Manager areas exist and stay inside the approved order, tracking, and receipt contracts. Create and submit for `OUT001` passed the later runtime recheck. Issue reporting through exceptions is not authorized.
 
 ## Screen fidelity
 
@@ -15,7 +15,7 @@ The four Store Manager areas exist and stay inside the approved order, tracking,
 - Create and submit call the existing `POST /api/orders` and `POST /api/orders/:id/submit` routes. The client does not calculate cutoff eligibility and does not call dispatcher confirm.
 - Tracking reads `GET /api/orders` and `GET /api/orders/:id` and labels `SUBMITTED`, `PLANNED_ALLOCATED`, `DELIVERED`, `RECEIPT_CONFIRMED`, and `DEFERRED` from the server status.
 - Receipt confirmation is offered only when the order status is `DELIVERED` and posts `result` plus optional `issueDetails` to `POST /api/orders/:id/receipt`.
-- The seeded Store Manager cannot create that order. On 2026-10-04 the local API authenticated `seed.store-manager`, `GET /api/orders` returned an empty list, and create for outlet `OUT001` returned `403 FORBIDDEN`. The dispatcher can read the seeded order `SEED-2026-06-02-OUT001` as `PLANNED_ALLOCATED`. The seed does not insert `user_outlets`.
+- The first review found no `user_outlets` row, so create returned `403 FORBIDDEN`. Seed commits `c8e3b79` and `6d32e35` record `seed.store-manager` on `OUT001` only. The runtime recheck then read the seeded order, submitted a new `OUT001` order, and received `403 FORBIDDEN` for `OUT002`.
 
 ## Authorization
 
@@ -36,8 +36,6 @@ The four Store Manager areas exist and stay inside the approved order, tracking,
 - The shell uses the sidebar at 768px and above and a bottom navigation below that width.
 - A live phone-width pass was not completed. The unauthenticated `/store` request redirects to sign-in, which is the expected session gate.
 
-## Required decision
+## Remaining blocker
 
-Persist the existing `user_outlets` assignment for `seed.store-manager` and competition outlet `OUT001` in the approved seed, or supply an already assigned outlet. Do not add an outlets API or a Store Manager exception permission in this phase.
-
-**Owning follow-up:** the competition seed scenario that creates `seed.store-manager` without a `user_outlets` row. Exception reporting remains owned by the dispatcher exception route.
+Exception reporting remains dispatcher-only. Receipt end-to-end remains blocked because no approved operation moves `LOADED` to `DISPATCHED`. Do not add either behavior in this review.
