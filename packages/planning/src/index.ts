@@ -27,6 +27,8 @@ export { validatePlanningInput, validationCategories } from "./validate.js";
 export type { PlanningValidationFailure, PlanningValidationResult, ValidationCategory } from "./validate.js";
 export { validateVehicleFuel, validateWeeklyFuel } from "./fuel.js";
 export type { FuelContext, FuelFailureCode, FuelResult, FuelTripInput } from "./fuel.js";
+export { generateCandidates, tripDistanceKm } from "./candidates.js";
+export type { CandidateGenerationResult, GeneratedCandidate } from "./candidates.js";
 export { classifyCutoff, cutoffEligibleOrders } from "./cutoff.js";
 export type { CutoffFailureCode, CutoffRequest, CutoffResult } from "./cutoff.js";
 export { calculateTripTime, tripTimeForOrders } from "./trip-time.js";
