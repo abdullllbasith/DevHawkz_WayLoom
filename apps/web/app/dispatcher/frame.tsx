@@ -24,6 +24,7 @@ export function DispatcherFrame({
   const isAllocationConfirmationPage = pathname.startsWith("/dispatcher/allocation-confirmation");
   const isRouteDetailPage = pathname.startsWith("/dispatcher/routes/") && pathname !== "/dispatcher/routes";
   const isRoutesPage = pathname === "/dispatcher/routes";
+  const isDeferralsPage = pathname.startsWith("/dispatcher/deferrals");
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
@@ -50,6 +51,11 @@ export function DispatcherFrame({
     breadcrumb = "Dispatcher > Routes > Route Details";
     title = "Route Details";
     subtitle = "Inspect route assignment, ordered stops, and operational status";
+    dateText = "Operational date";
+  } else if (isDeferralsPage) {
+    breadcrumb = "Dispatcher > Deferral Management";
+    title = "Deferral Management";
+    subtitle = "Inspect unallocated orders, planning constraints, and authoritative deferral reasons";
     dateText = "Operational date";
   } else if (isRoutesPage) {
     breadcrumb = "Dispatcher > Routes > Route Management";
@@ -80,7 +86,7 @@ export function DispatcherFrame({
           <span className="dispatcher-brand-name">WayLoom</span>
         </div>
 
-        <nav className="dispatcher-nav" aria-label="Dispatcher">
+        <nav className="dispatcher-nav" aria-label="Dispatcher" suppressHydrationWarning>
           {dispatcherNavigation.map((item) => {
             const isActive = item.href === active;
             return (

@@ -47,7 +47,13 @@ function sessionRecord(value: unknown): Record<string, unknown> | null {
 export function activeDispatcherHref(pathname: string): string | null {
   if (pathname === "/dispatcher") return "/dispatcher";
   if (pathname === "/dispatcher/routes" || pathname.startsWith("/dispatcher/routes/")) return "/dispatcher/routes";
-  if (pathname === "/dispatcher/planning" || pathname.startsWith("/dispatcher/planning/") || pathname.startsWith("/dispatcher/allocation-confirmation")) {
+  if (
+    pathname === "/dispatcher/planning" ||
+    pathname.startsWith("/dispatcher/planning/") ||
+    pathname.startsWith("/dispatcher/allocation-confirmation") ||
+    pathname === "/dispatcher/deferrals" ||
+    pathname.startsWith("/dispatcher/deferrals/")
+  ) {
     return "/dispatcher/planning";
   }
   const match = dispatcherNavigation.find((item) => item.href !== "/dispatcher" && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
