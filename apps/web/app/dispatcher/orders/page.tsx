@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import {
   brandBreakdown,
+  confirmOrderOnServer,
   countOrdersTabs,
   exportOrdersCsv,
   filterOrdersList,
@@ -29,6 +30,61 @@ export default function DispatcherOrdersPage() {
   const [selected, setSelected] = useState<DispatcherOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [closingOrderId, setClosingOrderId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  async function fetchCsrfToken(): Promise<string> {
+    try {
+      const res = await fetch("/api/auth/csrf");
+      if (res.ok) {
+        const data = (await res.json()) as { csrfToken?: string };
+        return data.csrfToken ?? "";
+      }
+    } catch {
+      // return empty token on failure
+    }
+    return "";
+  }
+
+  async function handleCloseOrder(targetOrder: DispatcherOrder) {
+    if (targetOrder.status !== "SUBMITTED" || closingOrderId !== null) return;
+    setClosingOrderId(targetOrder.id);
+    setActionFeedback(null);
+    const csrfToken = await fetchCsrfToken();
+    const result = await confirmOrderOnServer({
+      orderId: targetOrder.id,
+      csrfToken,
+    });
+    setClosingOrderId(null);
+    if (result.ok) {
+      setOrders((prev) =>
+        prev.map((item) => (item.id === result.order.id ? result.order : item)),
+      );
+      if (selected?.id === targetOrder.id) {
+        setSelected(result.order);
+      }
+      setActionFeedback(`Order ${targetOrder.orderId} successfully closed for planning (CONFIRMED).`);
+    } else {
+      if (result.code === "lifecycle_conflict") {
+        // Refresh orders to reflect authoritative state
+        try {
+          const res = await fetch("/api/orders", { cache: "no-store" });
+          if (res.ok) {
+            const data: unknown = await res.json();
+            const updated = readOrderList(data);
+            setOrders(updated);
+            const found = updated.find((o) => o.id === targetOrder.id);
+            if (found && selected?.id === targetOrder.id) {
+              setSelected(found);
+            }
+          }
+        } catch {
+          // ignore refresh failure
+        }
+      }
+      setActionFeedback(result.message);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +169,7 @@ export default function DispatcherOrdersPage() {
   return (
     <div className="orders-page-container">
       {error && <div className="dashboard-error" role="alert">{error}</div>}
+      {actionFeedback && <div className="dashboard-feedback" role="status">{actionFeedback}</div>}
       <section className="orders-kpi-grid" aria-label="Orders KPI Summary">
         {kpis.map((kpi) => (
           <div key={kpi.id} className="kpi-card">
@@ -208,7 +265,22 @@ export default function DispatcherOrdersPage() {
                     <td>—</td>
                     <td>—</td>
                     <td><span className="badge-status-pending">{order.status}</span></td>
-                    <td><button type="button" className="table-action-menu-btn" onClick={() => setSelected(order)} aria-label={`View ${order.orderId}`}>⋮</button></td>
+                    <td>
+                      <div className="order-row-actions">
+                        {order.status === "SUBMITTED" && (
+                          <button
+                            type="button"
+                            className="table-close-order-btn"
+                            onClick={() => void handleCloseOrder(order)}
+                            disabled={closingOrderId !== null}
+                            aria-label={`Confirm order ${order.orderId}`}
+                          >
+                            {closingOrderId === order.id ? "Closing..." : "Close order"}
+                          </button>
+                        )}
+                        <button type="button" className="table-action-menu-btn" onClick={() => setSelected(order)} aria-label={`View ${order.orderId}`}>⋮</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {visibleOrders.length === 0 && <tr><td colSpan={9} className="empty-table-cell">No orders match the current filter.</td></tr>}
@@ -317,6 +389,16 @@ export default function DispatcherOrdersPage() {
             </div>
             <div className="order-detail-footer">
               <button type="button" className="btn-secondary" onClick={() => setSelected(null)}>Close</button>
+              {selected.status === "SUBMITTED" && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void handleCloseOrder(selected)}
+                  disabled={closingOrderId !== null}
+                >
+                  {closingOrderId === selected.id ? "Closing order..." : "Close order"}
+                </button>
+              )}
               <button type="button" className="btn-primary" onClick={() => { setSelected(null); void runPlanning(); }}>Run planning</button>
             </div>
           </div>

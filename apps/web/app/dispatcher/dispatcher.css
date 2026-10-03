@@ -417,6 +417,44 @@ html:has(.dispatcher-shell) body {
   font-size: 13px;
 }
 
+.dashboard-feedback {
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 13px;
+}
+
+.table-close-order-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.table-close-order-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.table-close-order-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.order-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .ai-tab-btn:disabled,
 .ai-generate-btn:disabled,
 .order-tab-btn:disabled {

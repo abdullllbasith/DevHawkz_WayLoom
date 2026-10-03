@@ -124,6 +124,75 @@ export function latestOrderDate(orders: readonly DispatcherOrder[]): string | nu
   return [...dates].sort().at(-1) ?? null;
 }
 
+export type ConfirmOrderApiResult =
+  | { ok: true; order: DispatcherOrder }
+  | { ok: false; code: string; message: string };
+
+export async function confirmOrderOnServer(input: {
+  orderId: string;
+  csrfToken?: string;
+  fetchFn?: typeof fetch;
+}): Promise<ConfirmOrderApiResult> {
+  const clientFetch = input.fetchFn ?? (typeof fetch !== "undefined" ? fetch : undefined);
+  if (!clientFetch) {
+    return { ok: false, code: "environment_error", message: "Client fetch is unavailable." };
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (input.csrfToken) headers["x-wayloom-csrf"] = input.csrfToken;
+  try {
+    const response = await clientFetch(`/api/orders/${encodeURIComponent(input.orderId)}/confirm`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({}),
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      id?: string;
+      deliveryId?: string;
+      error?: { code?: string; message?: string };
+    };
+    if (response.ok && typeof data.id === "string") {
+      const parsed = readOrderList([data])[0];
+      if (parsed) {
+        return { ok: true, order: parsed };
+      }
+      return { ok: false, code: "parse_error", message: "Order response format invalid." };
+    }
+    const code = data.error?.code ?? "confirmation_failed";
+    if (code === "CSRF_INVALID" || code === "csrf_invalid") {
+      return {
+        ok: false,
+        code: "csrf_invalid",
+        message: "Security validation failed. Please refresh and try again.",
+      };
+    }
+    if (code === "INVALID_STATE_TRANSITION" || code === "lifecycle_conflict" || response.status === 409) {
+      return {
+        ok: false,
+        code: "lifecycle_conflict",
+        message: "Order cannot be closed because it is no longer in SUBMITTED state.",
+      };
+    }
+    if (code === "FORBIDDEN" || code === "authorization_failure" || response.status === 403 || response.status === 401) {
+      return {
+        ok: false,
+        code: "authorization_failure",
+        message: "Dispatcher authorization required to close orders.",
+      };
+    }
+    return {
+      ok: false,
+      code,
+      message: data.error?.message ?? "Unable to close order on the server.",
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "connection_error",
+      message: "Network error: unable to contact the order confirmation service.",
+    };
+  }
+}
+
 function text(value: unknown): string {
   return typeof value === "string" && value.length > 0 ? value : "—";
 }
