@@ -46,6 +46,8 @@ A Dispatcher records a deferral when a confirmed order has no trip stop. The rea
 
 A Dispatcher records an exception as its own row. The table has no order, trip, loading, delivery, or receipt link, so a client cannot attach one. Store Manager, Loader, and Driver are denied. The write does not change the order, trip, delivery, receipt, or deferral. No severity or exception status is stored. No business audit action name is approved, so these writes do not invent one.
 
+A Store Manager confirms one receipt for a delivered order at an assigned outlet. The receipt points at that delivery record. The order moves to `Receipt Confirmed` through the order transition. Issue details stay on the receipt. The delivery outcome and the order quantity stay unchanged. A second receipt for the same delivery conflicts. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
