@@ -1,54 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  countOrdersTabs,
-  defaultOrdersTableData,
-  exportOrdersCsv,
-  filterOrdersList,
-} from "./dispatcher-orders.ts";
+import { countOrdersTabs, exportOrdersCsv, filterOrdersList, readOrderList, type DispatcherOrder } from "./dispatcher-orders.ts";
 
-test("filterOrdersList filters by category tab correctly", () => {
-  const fresh = filterOrdersList(defaultOrdersTableData, { tab: "Fresh" });
-  assert.equal(fresh.every((o) => o.category === "Fresh"), true);
-  assert.equal(fresh.length, 2);
+const orders: DispatcherOrder[] = [
+  { id: "1", orderId: "D1", outlet: "OUT001", district: "Kandy", depot: "COLOMBO", brand: "Fresh", items: 4, weightKg: "10", volumeM3: "1", temperature: "chilled", status: "SUBMITTED", orderDate: "2026-06-02", submittedAt: "2026-06-01T08:00:00.000Z" },
+  { id: "2", orderId: "D2", outlet: "OUT002", district: "Jaffna", depot: "COLOMBO", brand: "Tech", items: 2, weightKg: "8", volumeM3: "1", temperature: "ambient", status: "CONFIRMED", orderDate: "2026-06-02", submittedAt: null },
+];
 
-  const highRisk = filterOrdersList(defaultOrdersTableData, { tab: "High Risk" });
-  assert.equal(highRisk.every((o) => o.priority === "High"), true);
-  assert.equal(highRisk.length, 3);
+test("filterOrdersList filters by brand and search", () => {
+  assert.equal(filterOrdersList(orders, { tab: "Fresh" }).length, 1);
+  assert.equal(filterOrdersList(orders, { tab: "High Risk" }).length, 0);
+  assert.equal(filterOrdersList(orders, { search: "kandy" })[0]?.orderId, "D1");
 });
 
-test("filterOrdersList filters by search query correctly", () => {
-  const result = filterOrdersList(defaultOrdersTableData, { search: "kandy" });
-  assert.equal(result.length, 1);
-  assert.equal(result[0]?.orderId, "ORD521");
-
-  const byId = filterOrdersList(defaultOrdersTableData, { search: "ord893" });
-  assert.equal(byId.length, 1);
-  assert.equal(byId[0]?.outlet, "StyleHub - Trinco");
+test("countOrdersTabs does not invent a high-risk total", () => {
+  const counts = countOrdersTabs(orders);
+  assert.equal(counts.All, 2);
+  assert.equal(counts.Fresh, 1);
+  assert.equal(counts.Tech, 1);
+  assert.equal(counts["High Risk"], 0);
 });
 
-test("filterOrdersList filters by multi-attribute criteria", () => {
-  const result = filterOrdersList(defaultOrdersTableData, {
-    category: "Tech",
-    priority: "High",
-  });
-  assert.equal(result.length, 1);
-  assert.equal(result[0]?.orderId, "ORD521");
-});
-
-test("countOrdersTabs returns canonical totals matching Designathon baseline", () => {
-  const counts = countOrdersTabs(defaultOrdersTableData);
-  assert.equal(counts.All, 105);
-  assert.equal(counts.Fresh, 42);
-  assert.equal(counts.Style, 38);
-  assert.equal(counts.Tech, 18);
-  assert.equal(counts["High Risk"], 7);
-});
-
-test("exportOrdersCsv formats CSV rows with headers", () => {
-  const csv = exportOrdersCsv(defaultOrdersTableData.slice(0, 2));
-  assert.equal(csv.includes("Order ID,Outlet,Region,Category,Items,Weight(kg),Delivery Window,Priority,Status"), true);
-  assert.equal(csv.includes("ORD521"), true);
-  assert.equal(csv.includes("ORD632"), true);
+test("readOrderList and export use order API fields", () => {
+  const read = readOrderList([{ id: "1", deliveryId: "D1", outletCode: "OUT001", district: "Kandy", depot: "COLOMBO", brand: "Fresh", orderUnits: 3, orderWeightKg: "1", orderVolumeM3: "1", tempRequirement: "chilled", status: "SUBMITTED", orderDate: "2026-06-02", submittedAt: null }]);
+  assert.equal(read[0]?.orderId, "D1");
+  const csv = exportOrdersCsv(read);
+  assert.equal(csv.includes("Delivery Window"), false);
+  assert.equal(csv.includes("D1"), true);
 });

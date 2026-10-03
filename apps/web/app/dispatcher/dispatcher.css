@@ -1,7 +1,22 @@
+html:has(.dispatcher-shell),
+html:has(.dispatcher-shell) body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+html:has(.dispatcher-shell) body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+}
+
 .dispatcher-shell {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background: #f8fafc;
   color: #0f172a;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -12,6 +27,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100vh;
+  overflow-y: auto;
   padding: 20px 16px;
   background: #ffffff;
   border-right: 1px solid #e2e8f0;
@@ -147,13 +164,16 @@
 .dispatcher-main {
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-width: 0;
-  overflow-x: hidden;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Top Header */
 .dispatcher-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -309,6 +329,10 @@
 
 /* Page Content */
 .dispatcher-content {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 10px 24px 32px 24px;
 }
 
@@ -382,6 +406,22 @@
 .kpi-subtitle {
   font-size: 11px;
   color: #64748b;
+}
+
+.dashboard-error {
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.ai-tab-btn:disabled,
+.ai-generate-btn:disabled,
+.order-tab-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* 2. Alert Strip */

@@ -26,29 +26,30 @@ export function DispatcherFrame({
 
   let breadcrumb = "Dashboard";
   let title = "Good evening, Dispatcher";
-  let subtitle = "Today, 12 Sep 2026";
-  let dateText = "13 Sep 2026 (Today)";
+  let subtitle = "Operational overview";
+  let dateText = "Planning date from orders";
 
   if (isAllocationConfirmationPage) {
     breadcrumb = "Dispatcher > AI Planning > AI Planning Results > Approved";
     title = "AI Planning Results";
     subtitle = "Review AI recommendations, optimize routes and approve the delivery plan";
-    dateText = "13 Sep 2025 (Today)";
+    dateText = "Operational date";
   } else if (isPlanningPage) {
     breadcrumb = "Dispatcher > AI Planning > AI Planning Results";
     title = "AI Planning Results";
     subtitle = "Review AI recommendations, optimize routes and approve the delivery plan";
-    dateText = "13 Sep 2025 (Today)";
+    dateText = "Operational date";
   } else if (isOrdersPage) {
     breadcrumb = "Dispatcher > Orders > All Orders";
     title = "Orders";
     subtitle = "View, manage and select orders for delivery planning.";
-    dateText = "13 Sep 2025 (Today)";
+    dateText = "Operational date";
   } else if (!isDashboardPage) {
     const matched = dispatcherNavigation.find((i) => i.href === active);
     breadcrumb = `Dispatcher > ${matched?.label ?? "Workspace"}`;
     title = matched?.label ?? "Dispatcher";
     subtitle = "Operations Workspace";
+    dateText = "Dispatcher";
   }
 
   return (
