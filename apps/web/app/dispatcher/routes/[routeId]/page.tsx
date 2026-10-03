@@ -10,6 +10,7 @@ import {
   tripDetailKpis,
   type TripDetail,
 } from "../../../../lib/dispatcher-route-details";
+import { tripReadyToDispatch } from "../../../../lib/dispatcher-dispatch";
 import { displayRouteId, exportRoutesCsv, routeColor } from "../../../../lib/dispatcher-routes";
 
 export default function DispatcherRouteDetailPage({
@@ -25,6 +26,8 @@ export default function DispatcherRouteDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +96,7 @@ export default function DispatcherRouteDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [routeId]);
+  }, [routeId, reloadKey]);
 
   if (notFound) {
     return (
@@ -147,6 +150,34 @@ export default function DispatcherRouteDetailPage({
   const kpis = tripDetailKpis(trip, totals);
   const routeDisplayId = displayRouteId(trip);
 
+  async function dispatchLoadedTrip() {
+    if (trip === null || dispatching) return;
+    setDispatching(true);
+    setError(null);
+    try {
+      const tokenResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
+      const tokenBody = tokenResponse.ok ? ((await tokenResponse.json()) as { csrfToken?: string }) : {};
+      const response = await fetch(`/api/trips/${encodeURIComponent(trip.id)}/dispatch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(tokenBody.csrfToken ? { "x-wayloom-csrf": tokenBody.csrfToken } : {}),
+        },
+        body: "{}",
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: { code?: string } };
+        setError(body.error?.code ?? "dispatch_failed");
+        return;
+      }
+      setReloadKey((value) => value + 1);
+    } catch {
+      setError("dispatch_failed");
+    } finally {
+      setDispatching(false);
+    }
+  }
+
   function handleExportRouteCsv() {
     if (!trip) return;
     const planTrip = {
@@ -198,6 +229,14 @@ export default function DispatcherRouteDetailPage({
           <button type="button" className="orders-export-btn" onClick={handleExportRouteCsv}>
             Export Route Sheet
           </button>
+          {tripReadyToDispatch({
+            stops: trip.stops,
+            orderStatus: (orderId) => orders.find((order) => order.id === orderId)?.status,
+          }) ? (
+            <button type="button" className="orders-export-btn" disabled={dispatching} onClick={() => void dispatchLoadedTrip()}>
+              {dispatching ? "Dispatching" : "Dispatch trip"}
+            </button>
+          ) : null}
         </div>
       </div>
 

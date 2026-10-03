@@ -631,6 +631,9 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
         }
         return stop;
       },
+      async recordTripDispatched() {
+        return undefined;
+      },
       async compareAndSetTripStatus(id, expected, next) {
         const current = state.trips.find((item) => item.id === id);
         if (current === undefined || current.status !== expected) return null;

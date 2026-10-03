@@ -12,7 +12,7 @@ import type {
   TripVehicle,
 } from "./trip.js";
 
-type TripDatabase = Pick<PrismaClient, "vehicle" | "order" | "trip" | "tripStop" | "outlet" | "deferral">;
+type TripDatabase = Pick<PrismaClient, "vehicle" | "order" | "trip" | "tripStop" | "outlet" | "deferral" | "auditEvent">;
 
 export function prismaTripStore(prisma: PrismaClient): TripStore {
   return {
@@ -131,6 +131,18 @@ function tripUnit(prisma: TripDatabase): TripUnit {
         }
         throw error;
       }
+    },
+    async recordTripDispatched(input) {
+      await prisma.auditEvent.create({
+        data: {
+          action: input.action,
+          occurredAt: input.occurredAt,
+          actorUserId: input.actorUserId,
+          targetType: "Trip",
+          targetId: input.tripId,
+          details: null,
+        },
+      });
     },
     async compareAndSetTripStatus(id, expected, next) {
       const written = await prisma.trip.updateMany({

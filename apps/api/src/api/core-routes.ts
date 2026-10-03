@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   parseConfirmTripRequest,
+  parseDispatchTripRequest,
   parseCreateExceptionRequest,
   parseCreateOrderRequest,
   parseDeferralListQuery,
@@ -40,7 +41,7 @@ import type { ReceiptStore } from "../domain/receipt.js";
 import type { PlanningContextLoadResult } from "../domain/planning-context.js";
 import { executePlanningRun } from "../domain/planning-run.js";
 import { applySyncBatch, parseSyncBatchBody, readSyncStatus, type SyncBatchStore } from "../domain/sync-batch.js";
-import { confirmTrip } from "../domain/trip.js";
+import { confirmTrip, dispatchTrip } from "../domain/trip.js";
 import type { StoredTrip, TripStore } from "../domain/trip.js";
 import { sendJson } from "../errors.js";
 import type { BusinessRoute, RequestSecurityContext } from "../security/api-boundary.js";
@@ -109,6 +110,8 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
       readPlanning(deps, response, request), /^\/api\/planning\/[^/]+$/),
     route("POST", "/api/trips/:id/confirm", ["DISPATCHER"], (context, response, request) =>
       confirmTripRoute(deps, context, response, request), /^\/api\/trips\/[^/]+\/confirm$/),
+    route("POST", "/api/trips/:id/dispatch", ["DISPATCHER"], (context, response, request) =>
+      dispatchTripRoute(deps, context, response, request), /^\/api\/trips\/[^/]+\/dispatch$/),
     route("GET", "/api/trips/:id", ["DISPATCHER", "STORE_MANAGER", "LOADER", "DRIVER"], (context, response, request) =>
       getTripRoute(deps, context, response, request), /^\/api\/trips\/[^/]+$/),
     route("GET", "/api/deferrals", ["DISPATCHER"], (_context, response, request) =>
@@ -348,6 +351,31 @@ async function confirmTripRoute(
     return;
   }
   sendJson(response, 200, toTripResponse(confirmed.trip));
+}
+
+async function dispatchTripRoute(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const tripId = pathId(request, /^\/api\/trips\/([^/]+)\/dispatch$/);
+  const body = await readJson(request);
+  if (tripId === null || body === "invalid" || !parseDispatchTripRequest(body).ok) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const dispatched = await dispatchTrip({
+    actor: actor(context),
+    tripId,
+    now: deps.now(),
+    store: deps.trips,
+  });
+  if (!dispatched.ok) {
+    sendDomainFailure(response, dispatched.code);
+    return;
+  }
+  sendJson(response, 200, toTripResponse(dispatched.trip));
 }
 
 async function listDeferralRoute(deps: CoreDependencies, response: ServerResponse, request: IncomingMessage): Promise<void> {

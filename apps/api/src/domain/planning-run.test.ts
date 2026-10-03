@@ -208,6 +208,9 @@ function memoryWorld(initialOrders: StoredOrder[]) {
         if (trip !== undefined) trip.stops.push(stop);
         return stop;
       },
+      async recordTripDispatched() {
+        return undefined;
+      },
       async compareAndSetTripStatus(id, expected, next) {
         const trip = trips.find((item) => item.id === id);
         if (trip === undefined || trip.status !== expected) return null;

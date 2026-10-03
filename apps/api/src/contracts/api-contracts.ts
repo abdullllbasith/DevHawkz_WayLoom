@@ -377,6 +377,10 @@ export function parseConfirmTripRequest(value: unknown): ContractResult<Record<s
   return parseEmpty(value);
 }
 
+export function parseDispatchTripRequest(value: unknown): ContractResult<Record<string, never>> {
+  return parseEmpty(value);
+}
+
 export function parseDeferralListQuery(value: unknown): ContractResult<DeferralListQuery> {
   const record = recordWithKeys(value, ["orderId", "reason"]);
   if (record === null) {

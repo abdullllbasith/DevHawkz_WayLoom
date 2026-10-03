@@ -5,7 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import type { OrderActor, OrderStore, StoredOrder } from "./order.js";
-import { confirmTrip, createTrip, type AllocationOrder, type StoredTrip, type TripStore, type TripVehicle } from "./trip.js";
+import { confirmTrip, createTrip, dispatchTrip, type AllocationOrder, type StoredTrip, type TripDispatchAudit, type TripStore, type TripVehicle } from "./trip.js";
 
 const dispatcherId = "11111111-1111-4111-8111-111111111111";
 const loaderId = "22222222-2222-4222-8222-222222222222";
@@ -241,6 +241,54 @@ test("an equal capacity allocation is accepted and an ambient van-only truck is 
   assert.equal(created.ok, true);
 });
 
+test("a dispatcher dispatches a trip only when every order is loaded", async () => {
+  const store = memoryStore();
+  const created = await createTrip({ actor: dispatcher(), command: command(store, stops()), store });
+  assert.equal(created.ok, true);
+  if (!created.ok) {
+    return;
+  }
+  const now = new Date("2026-06-02T09:00:00.000Z");
+  assert.deepEqual(await dispatchTrip({ actor: loader(), tripId: created.trip.id, now, store }), {
+    ok: false,
+    code: "authorization_failure",
+  });
+  assert.deepEqual(await dispatchTrip({ actor: dispatcher(), tripId: created.trip.id, now, store }), {
+    ok: false,
+    code: "lifecycle_conflict",
+  });
+  for (const order of store.orders) {
+    order.status = "LOADED";
+  }
+  store.orders[1].status = "PLANNED_ALLOCATED";
+  assert.deepEqual(await dispatchTrip({ actor: dispatcher(), tripId: created.trip.id, now, store }), {
+    ok: false,
+    code: "lifecycle_conflict",
+  });
+  assert.equal(store.orders.some((order) => order.status === "DISPATCHED"), false);
+  assert.equal(store.audits.length, 0);
+  store.orders[1].status = "LOADED";
+  const dispatched = await dispatchTrip({ actor: dispatcher(), tripId: created.trip.id, now, store });
+  assert.equal(dispatched.ok, true);
+  if (!dispatched.ok) {
+    return;
+  }
+  assert.equal(dispatched.trip.status, "PLANNED");
+  assert.equal(store.orders.every((order) => order.status === "DISPATCHED"), true);
+  assert.deepEqual(store.audits, [
+    {
+      action: "TRIP_DISPATCHED",
+      tripId: created.trip.id,
+      actorUserId: dispatcherId,
+      occurredAt: now,
+    },
+  ]);
+  const repeated = await dispatchTrip({ actor: dispatcher(), tripId: created.trip.id, now, store });
+  assert.deepEqual(repeated, { ok: false, code: "lifecycle_conflict" });
+  assert.equal(store.audits.length, 1);
+  assert.equal(store.orders.every((order) => order.status === "DISPATCHED"), true);
+});
+
 test("trip persistence does not calculate fuel or add a route leg", () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
   const source = readFileSync(resolve(root, "apps/api/src/domain/trip.ts"), "utf8");
@@ -307,6 +355,7 @@ type Memory = TripStore & {
   orders: MemoryOrder[];
   trips: StoredTrip[];
   stops: MemoryOrder extends never ? never : import("./trip.js").StoredStop[];
+  audits: TripDispatchAudit[];
   sabotageSecondTransition: boolean;
 };
 
@@ -325,11 +374,13 @@ function memoryStore(): Memory {
   const orders: MemoryOrder[] = [order("order-1"), order("order-2")];
   const trips: StoredTrip[] = [];
   const stops: import("./trip.js").StoredStop[] = [];
+  const audits: TripDispatchAudit[] = [];
   const state = {
     vehicles,
     orders,
     trips,
     stops,
+    audits,
     sabotageSecondTransition: false,
     async transaction<T>(work: (unit: import("./trip.js").TripUnit) => Promise<T>): Promise<T> {
       const snapshot = structuredClone({
@@ -337,6 +388,7 @@ function memoryStore(): Memory {
         orders,
         trips,
         stops,
+        audits,
       });
       try {
         return await work(unit());
@@ -345,6 +397,7 @@ function memoryStore(): Memory {
         orders.splice(0, orders.length, ...snapshot.orders);
         trips.splice(0, trips.length, ...snapshot.trips);
         stops.splice(0, stops.length, ...snapshot.stops);
+        audits.splice(0, audits.length, ...snapshot.audits);
         throw error;
       }
     },
@@ -415,6 +468,9 @@ function memoryStore(): Memory {
           }
         }
         return stop;
+      },
+      async recordTripDispatched(input) {
+        audits.push(input);
       },
       async compareAndSetTripStatus(id, expected, next) {
         const trip = trips.find((item) => item.id === id);

@@ -192,6 +192,9 @@ function tripUnit(trip: StoredTrip): import("./trip.js").TripUnit {
     async orderHasStop() { return false; },
     async createTrip() { throw new Error("not used"); },
     async createStop() { throw new Error("not used"); },
+    async recordTripDispatched() {
+      return undefined;
+    },
     async compareAndSetTripStatus(_id, expected, next) {
       if (trip.status !== expected) return null;
       trip.status = next;

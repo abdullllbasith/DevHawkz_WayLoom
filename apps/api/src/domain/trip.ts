@@ -63,6 +63,13 @@ export type StoredTrip = {
   stops: StoredStop[];
 };
 
+export type TripDispatchAudit = {
+  action: "TRIP_DISPATCHED";
+  tripId: string;
+  actorUserId: string;
+  occurredAt: Date;
+};
+
 export type TripUnit = {
   orders: import("./order.js").OrderStore;
   findVehicle(id: string): Promise<TripVehicle | null>;
@@ -90,6 +97,7 @@ export type TripUnit = {
     expected: TripStatusName,
     next: TripStatusName,
   ): Promise<StoredTrip | null>;
+  recordTripDispatched(input: TripDispatchAudit): Promise<void>;
 };
 
 export type TripStore = {
@@ -252,6 +260,71 @@ export async function confirmTrip(input: {
       return failure(error.code);
     }
       return failure(persistenceCode(error));
+  }
+}
+
+export async function dispatchTrip(input: {
+  actor: OrderActor;
+  tripId: string;
+  now: Date;
+  store: TripStore;
+  command?: Record<string, unknown>;
+}): Promise<TripResult> {
+  if (input.command !== undefined && hasProhibitedField(input.command)) {
+    return failure("invalid_input");
+  }
+  if (!dispatcher(input.actor)) {
+    return failure("authorization_failure");
+  }
+  try {
+    return await input.store.transaction(async (unit) => {
+      const trip = await unit.findTripById(input.tripId);
+      if (trip === null) {
+        throw rejected("not_found");
+      }
+      if (trip.stops.length === 0) {
+        throw rejected("lifecycle_conflict");
+      }
+      const orders = [];
+      for (const stop of trip.stops) {
+        const order = await unit.orders.findById(stop.orderId);
+        if (order === null) {
+          throw rejected("not_found");
+        }
+        orders.push(order);
+      }
+      if (orders.some((order) => order.status !== "LOADED")) {
+        throw rejected("lifecycle_conflict");
+      }
+      for (const order of orders) {
+        const moved = await transitionOrder({
+          actor: input.actor,
+          orderId: order.id,
+          to: "DISPATCHED",
+          now: input.now,
+          store: unit.orders,
+        });
+        if (!moved.ok) {
+          throw rejected(moved.code === "concurrency_conflict" ? "concurrency_conflict" : "invalid_transition");
+        }
+      }
+      await unit.recordTripDispatched({
+        action: "TRIP_DISPATCHED",
+        tripId: trip.id,
+        actorUserId: input.actor.userId,
+        occurredAt: input.now,
+      });
+      const current = await unit.findTripById(trip.id);
+      if (current === null) {
+        throw rejected("not_found");
+      }
+      return { ok: true as const, trip: current };
+    });
+  } catch (error) {
+    if (error instanceof TripRejected) {
+      return failure(error.code);
+    }
+    return failure(persistenceCode(error));
   }
 }
 
