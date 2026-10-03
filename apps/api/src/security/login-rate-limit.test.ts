@@ -49,9 +49,9 @@ test("failed logins are throttled without blocking another identifier", async ()
     assert.equal(second.status, 401);
     assert.equal(throttled.status, 429);
     assert.equal(throttled.headers.get("retry-after"), "10");
-    assert.deepEqual(await throttled.json(), { error: { code: "rate_limited", message: "Too many attempts." } });
+    assert.deepEqual(await throttled.json(), { error: { code: "RATE_LIMITED", message: "Too many attempts.", details: {} } });
     assert.equal(other.status, 401);
-    assert.deepEqual(await other.json(), { error: { code: "authentication_failed", message: "Authentication failed." } });
+    assert.deepEqual(await other.json(), { error: { code: "AUTHENTICATION_FAILED", message: "Authentication failed.", details: {} } });
     assert.equal(health.status, 200);
     assert.equal(sessions.rows.length, 1);
     now = new Date(now.getTime() + 10_000);

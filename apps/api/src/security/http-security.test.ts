@@ -92,7 +92,7 @@ test("CORS allows only the configured origin and preserves CSRF", async () => {
     assert.equal(logout.headers.get("access-control-allow-origin"), frontend);
     assert.equal(logout.headers.get("cache-control"), "no-store");
     const body = await logout.json();
-    assert.deepEqual(body, { error: { code: "csrf_invalid", message: "CSRF validation failed." } });
+    assert.deepEqual(body, { error: { code: "CSRF_INVALID", message: "CSRF validation failed.", details: {} } });
     assert.equal(JSON.stringify(body).includes("stack"), false);
   } finally {
     await close(server);

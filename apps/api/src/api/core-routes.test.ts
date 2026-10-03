@@ -116,7 +116,7 @@ test("core endpoints keep authorization, validation, and domain results", async 
       body: JSON.stringify({ operationalDate: "2026-06-02" }),
     });
     assert.equal(missingCsrf.status, 403);
-    assert.equal(((await missingCsrf.json()) as { error: { code: string } }).error.code, "csrf_invalid");
+    assert.equal(((await missingCsrf.json()) as { error: { code: string } }).error.code, "CSRF_INVALID");
 
     const verified = await send(server, `/api/loading/${loadStop}/verify`, loaderCookie, { loadedUnits: 8 });
     assert.equal(verified.status, 201);

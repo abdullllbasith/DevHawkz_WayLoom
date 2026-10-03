@@ -103,7 +103,7 @@ test("unknown, inactive, and wrong-password logins fail the same way", async () 
     assert.equal(unknown.body, wrong.body);
     assert.equal(disabled.body, wrong.body);
     assert.deepEqual(JSON.parse(unknown.body), {
-      error: { code: "authentication_failed", message: "Authentication failed." },
+      error: { code: "AUTHENTICATION_FAILED", message: "Authentication failed.", details: {} },
     });
     assert.equal(unknown.setCookie, "");
     assert.equal(sessions.rows.length, 0);
@@ -116,7 +116,7 @@ test("unknown, inactive, and wrong-password logins fail the same way", async () 
     });
     assert.equal(invalid.status, 400);
     assert.deepEqual(await invalid.json(), {
-      error: { code: "invalid_request", message: "Invalid request." },
+      error: { code: "VALIDATION_FAILED", message: "Request validation failed.", details: { fields: {} } },
     });
   } finally {
     await close(server);
@@ -151,7 +151,7 @@ test("current user rejects missing, invalid, and expired sessions", async () => 
     assert.equal(await missing.text(), await invalid.text());
     const expiredBody = await expired.text();
     const missingBody = JSON.stringify({
-      error: { code: "authentication_required", message: "Authentication required." },
+      error: { code: "AUTHENTICATION_REQUIRED", message: "Authentication required.", details: {} },
     });
     assert.equal(expiredBody, missingBody);
     assert.equal(sessions.rows[0]?.revokedAt, null);

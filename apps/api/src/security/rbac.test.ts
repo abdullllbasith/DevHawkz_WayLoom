@@ -54,13 +54,13 @@ test("each approved role can access only its protected operation", async () => {
     });
     const deniedBody = await denied.text();
     assert.equal(denied.status, 403);
-    assert.deepEqual(JSON.parse(deniedBody), { error: { code: "forbidden", message: "Forbidden." } });
+    assert.deepEqual(JSON.parse(deniedBody), { error: { code: "FORBIDDEN", message: "Forbidden.", details: {} } });
     assert.equal(deniedBody.includes("DISPATCHER"), false);
     assert.equal(users[1]?.role, "LOADER");
     const missing = await fetch(url(server, "/probe/driver"));
     assert.equal(missing.status, 401);
     assert.deepEqual(await missing.json(), {
-      error: { code: "authentication_required", message: "Authentication required." },
+      error: { code: "AUTHENTICATION_REQUIRED", message: "Authentication required.", details: {} },
     });
   } finally {
     await close(server);

@@ -130,10 +130,12 @@ Password hashing uses Argon2id through `@node-rs/argon2` 2.2.1. The module keeps
 
 ## Errors
 
-Unexpected failures return JSON:
+Every API error uses the same JSON shape. `error.code` is the stable value. `error.details` is `{}` except for validation, which uses `{ "fields": {} }`.
+
+Authentication uses `AUTHENTICATION_REQUIRED` or `AUTHENTICATION_FAILED`. Role denial is `FORBIDDEN`. A missing or out-of-scope record is `RESOURCE_NOT_FOUND`. Validation is `VALIDATION_FAILED`. A lifecycle rejection is `INVALID_STATE_TRANSITION`. A domain rule rejection is `DOMAIN_RULE_VIOLATION`. A serialization conflict is `CONCURRENT_MODIFICATION`. CSRF remains `CSRF_INVALID`. Too many login attempts remains HTTP 429 and `RATE_LIMITED`. An unexpected failure is:
 
 ```json
-{ "error": { "code": "internal_error", "message": "Internal server error." } }
+{ "error": { "code": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred.", "details": {} } }
 ```
 
-Production responses do not include stack traces. The server logs the failure without printing passwords, session secrets, or connection strings.
+The response does not include a stack trace, SQL, a Prisma error, a password, a session id, or a CSRF token. Production logs the failure without printing passwords, session secrets, or connection strings.

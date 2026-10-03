@@ -58,7 +58,7 @@ test("security decisions create one safe audit event", async () => {
     const role = await fetch(url(server, "/api/orders/read"), { headers: { cookie } });
     assert.equal(role.status, 403);
     const roleBody = await role.json();
-    assert.deepEqual(roleBody, { error: { code: "forbidden", message: "Forbidden." } });
+    assert.deepEqual(roleBody, { error: { code: "FORBIDDEN", message: "Forbidden.", details: {} } });
 
     const object = await fetch(url(server, "/api/orders/change"), {
       method: "POST",

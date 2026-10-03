@@ -107,7 +107,7 @@ test("a business route authenticates, checks role and object, then runs", async 
       headers: { cookie: loaderCookie, "x-role": "STORE_MANAGER", "x-wayloom-csrf": csrfFor(loaderCookie) },
     });
     assert.equal(wrongRole.status, 403);
-    assert.deepEqual(await wrongRole.json(), { error: { code: "forbidden", message: "Forbidden." } });
+    assert.deepEqual(await wrongRole.json(), { error: { code: "FORBIDDEN", message: "Forbidden.", details: {} } });
     assert.equal(handled, false);
     const managerCookie = await cookieFor(storeManager, sessions);
     const outside = await fetch(url(server, "/api/orders/scope?outletId=" + outletA), {

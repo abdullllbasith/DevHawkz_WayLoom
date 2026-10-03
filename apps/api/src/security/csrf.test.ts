@@ -73,7 +73,7 @@ test("state-changing requests require a session-bound CSRF header", async () => 
       headers: { cookie: managerCookie, "x-role": "STORE_MANAGER" },
     });
     assert.equal(missing.status, 403);
-    assert.deepEqual(await missing.json(), { error: { code: "csrf_invalid", message: "CSRF validation failed." } });
+    assert.deepEqual(await missing.json(), { error: { code: "CSRF_INVALID", message: "CSRF validation failed.", details: {} } });
     assert.equal(mutated, false);
     const malformed = await fetch(url(server, "/api/orders/change?csrfToken=" + csrf), {
       method: "POST",
