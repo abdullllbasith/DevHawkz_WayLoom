@@ -1,4 +1,5 @@
 import { authorizeDispatcherOperational } from "../security/object-authorization.js";
+import { persistenceCode } from "./domain-transaction.js";
 import type { OrderActor, OrderStatusName } from "./order.js";
 import { transitionOrder } from "./order-transition.js";
 
@@ -214,7 +215,7 @@ export async function createTrip(input: {
     if (error instanceof TripRejected) {
       return failure(error.code);
     }
-    return failure("persistence_failure");
+      return failure(persistenceCode(error));
   }
 }
 
@@ -250,7 +251,7 @@ export async function confirmTrip(input: {
     if (error instanceof TripRejected) {
       return failure(error.code);
     }
-    return failure("persistence_failure");
+      return failure(persistenceCode(error));
   }
 }
 

@@ -84,6 +84,8 @@ Client requests cannot set an actor, role, status, planning result, vehicle, tri
 
 The running API registers these routes behind the existing session, role, and CSRF checks. A resource id is looked up by the domain. The handler does not write order status itself and does not open its own database transaction.
 
+Trip allocation, trip confirmation, loading, delivery, deferral, and receipt confirmation each run in one serializable database transaction. The order status write still matches the previously read status. A database serialization conflict comes back as a concurrency failure and does not leave the earlier write committed. No business audit row is required for these operations. The planning route does not open a transaction and does not call the planning service inside one. One order can still have more than one trip stop in the database; that uniqueness rule is not approved.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.

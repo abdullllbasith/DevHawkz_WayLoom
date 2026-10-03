@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
+import { domainTransactionOptions } from "./domain-transaction.js";
 import { prismaOrderStore } from "./order-store.js";
 import type { DeliveryStop, DeliveryStore, DeliveryUnit, StoredDelivery, StoredProof } from "./delivery.js";
 
@@ -11,7 +12,7 @@ type DeliveryDatabase = Pick<
 export function prismaDeliveryStore(prisma: PrismaClient): DeliveryStore {
   return {
     transaction(work) {
-      return prisma.$transaction((transaction) => work(deliveryUnit(transaction)));
+      return prisma.$transaction((transaction) => work(deliveryUnit(transaction)), domainTransactionOptions);
     },
   };
 }

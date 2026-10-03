@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
+import { domainTransactionOptions } from "./domain-transaction.js";
 import { prismaOrderStore } from "./order-store.js";
 import type {
   AllocationOrder,
@@ -16,7 +17,7 @@ type TripDatabase = Pick<PrismaClient, "vehicle" | "order" | "trip" | "tripStop"
 export function prismaTripStore(prisma: PrismaClient): TripStore {
   return {
     transaction(work) {
-      return prisma.$transaction((transaction) => work(tripUnit(transaction)));
+      return prisma.$transaction((transaction) => work(tripUnit(transaction)), domainTransactionOptions);
     },
   };
 }

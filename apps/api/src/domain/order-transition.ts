@@ -2,6 +2,7 @@ import {
   authorizeDispatcherOperational,
   authorizeStoreManagerOutlet,
 } from "../security/object-authorization.js";
+import { persistenceCode } from "./domain-transaction.js";
 import {
   orderStatuses,
   type OrderActor,
@@ -67,8 +68,8 @@ export async function transitionOrder(input: {
   let order;
   try {
     order = await input.store.findById(input.orderId);
-  } catch {
-    return failure("persistence_failure");
+  } catch (error) {
+    return failure(persistenceCode(error));
   }
   if (order === null) {
     return failure("not_found");
@@ -80,8 +81,8 @@ export async function transitionOrder(input: {
   let facts: OrderTransitionFacts;
   try {
     facts = await input.store.findTransitionFacts(order.id);
-  } catch {
-    return failure("persistence_failure");
+  } catch (error) {
+    return failure(persistenceCode(error));
   }
   const denied = authorizeTransition(input.actor, order.outletId, edge.owner, edge.prerequisite, facts);
   if (denied !== null) {
@@ -99,8 +100,8 @@ export async function transitionOrder(input: {
       return failure(current === null ? "not_found" : "concurrency_conflict");
     }
     return { ok: true, order: updated };
-  } catch {
-    return failure("persistence_failure");
+  } catch (error) {
+    return failure(persistenceCode(error));
   }
 }
 

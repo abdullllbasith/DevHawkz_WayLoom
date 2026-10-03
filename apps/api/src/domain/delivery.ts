@@ -1,4 +1,5 @@
 import { authorizeDriverDelivery, authorizeDriverRoute } from "../security/object-authorization.js";
+import { persistenceCode } from "./domain-transaction.js";
 import type { OrderActor, OrderStatusName } from "./order.js";
 import { transitionOrder } from "./order-transition.js";
 
@@ -167,7 +168,7 @@ export async function recordDelivery(input: {
     if (error instanceof DeliveryRejected) {
       return failure(error.code);
     }
-    return failure("persistence_failure");
+    return failure(persistenceCode(error));
   }
 }
 
@@ -222,7 +223,7 @@ export async function recordProof(input: {
     if (error instanceof DeliveryRejected) {
       return { ok: false, code: error.code };
     }
-    return { ok: false, code: "persistence_failure" };
+    return { ok: false, code: persistenceCode(error) };
   }
 }
 

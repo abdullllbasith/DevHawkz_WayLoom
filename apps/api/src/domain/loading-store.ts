@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
+import { domainTransactionOptions } from "./domain-transaction.js";
 import { prismaOrderStore } from "./order-store.js";
 import type { LoadingStop, LoadingStore, LoadingUnit, StoredLoading } from "./loading.js";
 
@@ -8,7 +9,7 @@ type LoadingDatabase = Pick<PrismaClient, "tripStop" | "loadingRecord" | "order"
 export function prismaLoadingStore(prisma: PrismaClient): LoadingStore {
   return {
     transaction(work) {
-      return prisma.$transaction((transaction) => work(loadingUnit(transaction)));
+      return prisma.$transaction((transaction) => work(loadingUnit(transaction)), domainTransactionOptions);
     },
   };
 }

@@ -1,9 +1,11 @@
 import { authorizeDispatcherOperational } from "../security/object-authorization.js";
+import { persistenceCode } from "./domain-transaction.js";
 import type { OrderActor } from "./order.js";
 
 export type ExceptionDomainCode =
   | "invalid_input"
   | "authorization_failure"
+  | "concurrency_conflict"
   | "persistence_failure";
 
 export type ExceptionResult =
@@ -70,8 +72,8 @@ export async function recordException(input: {
       reportedByUserId: input.actor.userId,
     });
     return { ok: true, exception };
-  } catch {
-    return failure("persistence_failure");
+  } catch (error) {
+    return failure(persistenceCode(error));
   }
 }
 

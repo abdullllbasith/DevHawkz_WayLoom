@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
+import { domainTransactionOptions } from "./domain-transaction.js";
 import { prismaOrderStore } from "./order-store.js";
 import type { DeferralOrder, DeferralReasonName, DeferralStore, DeferralUnit, StoredDeferral } from "./deferral.js";
 
@@ -8,7 +9,7 @@ type DeferralDatabase = Pick<PrismaClient, "order" | "outlet" | "tripStop" | "de
 export function prismaDeferralStore(prisma: PrismaClient): DeferralStore {
   return {
     transaction(work) {
-      return prisma.$transaction((transaction) => work(deferralUnit(transaction)));
+      return prisma.$transaction((transaction) => work(deferralUnit(transaction)), domainTransactionOptions);
     },
   };
 }

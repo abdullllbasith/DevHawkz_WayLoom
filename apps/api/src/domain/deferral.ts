@@ -1,4 +1,5 @@
 import { authorizeDispatcherOperational } from "../security/object-authorization.js";
+import { persistenceCode } from "./domain-transaction.js";
 import type { OrderActor, OrderStatusName } from "./order.js";
 import { transitionOrder } from "./order-transition.js";
 
@@ -126,7 +127,7 @@ export async function recordDeferral(input: {
     if (error instanceof DeferralRejected) {
       return failure(error.code);
     }
-    return failure("persistence_failure");
+    return failure(persistenceCode(error));
   }
 }
 

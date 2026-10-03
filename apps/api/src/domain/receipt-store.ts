@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
+import { domainTransactionOptions } from "./domain-transaction.js";
 import { prismaOrderStore } from "./order-store.js";
 import type { ReceiptDelivery, ReceiptStore, ReceiptUnit, StoredReceipt } from "./receipt.js";
 
@@ -11,7 +12,7 @@ type ReceiptDatabase = Pick<
 export function prismaReceiptStore(prisma: PrismaClient): ReceiptStore {
   return {
     transaction(work) {
-      return prisma.$transaction((transaction) => work(receiptUnit(transaction)));
+      return prisma.$transaction((transaction) => work(receiptUnit(transaction)), domainTransactionOptions);
     },
   };
 }
