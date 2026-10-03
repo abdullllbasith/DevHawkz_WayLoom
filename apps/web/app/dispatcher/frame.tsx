@@ -22,6 +22,7 @@ export function DispatcherFrame({
   const isOrdersPage = pathname.startsWith("/dispatcher/orders");
   const isPlanningPage = pathname.startsWith("/dispatcher/planning");
   const isAllocationConfirmationPage = pathname.startsWith("/dispatcher/allocation-confirmation");
+  const isRoutesPage = pathname.startsWith("/dispatcher/routes");
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
@@ -43,6 +44,11 @@ export function DispatcherFrame({
     breadcrumb = "Dispatcher > Orders > All Orders";
     title = "Orders";
     subtitle = "View orders for delivery planning.";
+    dateText = "Operational date";
+  } else if (isRoutesPage) {
+    breadcrumb = "Dispatcher > Routes > Route Management";
+    title = "Route Management";
+    subtitle = "Monitor and review planned delivery routes";
     dateText = "Operational date";
   } else if (!isDashboardPage) {
     const matched = dispatcherNavigation.find((i) => i.href === active);
@@ -77,6 +83,7 @@ export function DispatcherFrame({
                 href={item.href}
                 className={`dispatcher-nav-link ${isActive ? "active" : ""}`}
                 aria-current={isActive ? "page" : undefined}
+                suppressHydrationWarning
               >
                 <span className="dispatcher-nav-icon" aria-hidden="true">
                   {navIcon(item.label)}
