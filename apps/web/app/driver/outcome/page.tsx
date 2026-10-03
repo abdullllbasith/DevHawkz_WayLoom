@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 
 import { WAYLOOM_CSRF_HEADER } from "../../../lib/api-client";
 import { deliveryOutcomeBody } from "../../../lib/driver-delivery";
+import { recordOfflineAction } from "../../../lib/offline-recording";
+import { openIndexedDbOfflineStore } from "../../../lib/offline-store";
 
 export default function DriverOutcomePage() {
   const stopId = useSearchParams().get("stop");
@@ -12,6 +14,7 @@ export default function DriverOutcomePage() {
   const [deliveredUnits, setDeliveredUnits] = useState("");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [eventId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
 
   async function submit() {
@@ -45,7 +48,16 @@ export default function DriverOutcomePage() {
       }
       setMessage("The delivery outcome was recorded.");
     } catch {
-      setMessage("The server did not record the outcome. The stop is unchanged.");
+      const store = await openIndexedDbOfflineStore();
+      const saved = await recordOfflineAction({
+        store,
+        clientEventId: eventId,
+        eventType: "delivery outcome",
+        targetId: stopId,
+        clientCreatedAt: new Date().toISOString(),
+        payload: body,
+      });
+      setMessage(`${saved.state}. The server has not confirmed this outcome.`);
     } finally {
       setPending(false);
     }

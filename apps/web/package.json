@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --experimental-strip-types --test lib/dispatcher-shell.test.ts lib/dispatcher-dashboard.test.ts lib/dispatcher-orders.test.ts lib/auth-client.test.ts lib/dispatcher-planning.test.ts lib/dispatcher-confirmation.test.ts lib/dispatcher-routes.test.ts lib/dispatcher-route-details.test.ts lib/dispatcher-deferrals.test.ts lib/dispatcher-exceptions.test.ts lib/loader-shell.test.ts lib/driver-shell.test.ts lib/driver-routes.test.ts lib/driver-delivery.test.ts lib/driver-pod.test.ts lib/driver-gate.test.ts lib/offline-boundary.test.ts lib/offline-policy.test.ts lib/offline-store.test.ts"
+    "test": "node --experimental-strip-types --test lib/dispatcher-shell.test.ts lib/dispatcher-dashboard.test.ts lib/dispatcher-orders.test.ts lib/auth-client.test.ts lib/dispatcher-planning.test.ts lib/dispatcher-confirmation.test.ts lib/dispatcher-routes.test.ts lib/dispatcher-route-details.test.ts lib/dispatcher-deferrals.test.ts lib/dispatcher-exceptions.test.ts lib/loader-shell.test.ts lib/driver-shell.test.ts lib/driver-routes.test.ts lib/driver-delivery.test.ts lib/driver-pod.test.ts lib/driver-gate.test.ts lib/offline-boundary.test.ts lib/offline-policy.test.ts lib/offline-store.test.ts lib/offline-recording.test.ts"
   },
   "dependencies": {
     "next": "16.3.8",

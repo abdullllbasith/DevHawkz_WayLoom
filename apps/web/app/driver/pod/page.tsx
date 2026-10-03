@@ -5,11 +5,14 @@ import { useSearchParams } from "next/navigation";
 
 import { WAYLOOM_CSRF_HEADER } from "../../../lib/api-client";
 import { proofBody } from "../../../lib/driver-pod";
+import { recordOfflineAction } from "../../../lib/offline-recording";
+import { openIndexedDbOfflineStore } from "../../../lib/offline-store";
 
 export default function DriverPodPage() {
   const stopId = useSearchParams().get("stop");
   const [evidenceReference, setEvidenceReference] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [eventId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
 
   async function submit() {
@@ -39,7 +42,16 @@ export default function DriverPodPage() {
       }
       setMessage("The proof reference was stored.");
     } catch {
-      setMessage("The server did not store the proof. Opening this screen is not delivery proof.");
+      const store = await openIndexedDbOfflineStore();
+      const saved = await recordOfflineAction({
+        store,
+        clientEventId: eventId,
+        eventType: "proof of delivery",
+        targetId: stopId,
+        clientCreatedAt: new Date().toISOString(),
+        payload: body,
+      });
+      setMessage(`${saved.state}. The server has not confirmed this proof.`);
     } finally {
       setPending(false);
     }
