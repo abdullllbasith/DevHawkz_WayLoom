@@ -2,6 +2,7 @@ export type StoreOrder = {
   id: string;
   deliveryId: string;
   orderDate: string;
+  outletId: string;
   outletCode: string;
   brand: string;
   district: string;
@@ -34,12 +35,13 @@ function readStoreOrder(value: unknown): StoreOrder | null {
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
   if (typeof record.id !== "string" || typeof record.deliveryId !== "string" || typeof record.status !== "string") return null;
-  if (typeof record.orderDate !== "string" || typeof record.outletCode !== "string") return null;
+  if (typeof record.orderDate !== "string" || typeof record.outletId !== "string" || typeof record.outletCode !== "string") return null;
   if (typeof record.orderUnits !== "number") return null;
   return {
     id: record.id,
     deliveryId: record.deliveryId,
     orderDate: record.orderDate,
+    outletId: record.outletId,
     outletCode: record.outletCode,
     brand: typeof record.brand === "string" ? record.brand : "—",
     district: typeof record.district === "string" ? record.district : "—",

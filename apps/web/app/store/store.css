@@ -89,6 +89,28 @@
   gap: 12px;
 }
 
+.store-card label {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.store-card input,
+.store-card select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.store-action {
+  background: #0f172a;
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
 .store-nav {
   display: none;
 }

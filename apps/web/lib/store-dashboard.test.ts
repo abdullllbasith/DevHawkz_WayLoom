@@ -9,6 +9,7 @@ test("store dashboard reads server order status and does not invent metrics", ()
       id: "order-1",
       deliveryId: "SEED-2026-06-02-OUT001",
       orderDate: "2026-06-02",
+      outletId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
       outletCode: "OUT001",
       brand: "Fresh",
       district: "Colombo",
