@@ -28,6 +28,8 @@ export type { PlanningValidationFailure, PlanningValidationResult, ValidationCat
 export { validateVehicleFuel, validateWeeklyFuel } from "./fuel.js";
 export type { FuelContext, FuelFailureCode, FuelResult, FuelTripInput } from "./fuel.js";
 export { runClosedPlanning } from "./failure.js";
+export { executePlanningEngine } from "./execute.js";
+export { selectDeterministicTripIds } from "./selection.js";
 export { assemblePlanningResult } from "./result.js";
 export type { PlanningRun } from "./result.js";
 export { explainAllocations } from "./deferral-reason.js";

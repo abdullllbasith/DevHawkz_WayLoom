@@ -4,8 +4,16 @@ import { sendError } from "../errors.js";
 const transitionCodes = new Set(["invalid_transition", "lifecycle_conflict", "prerequisite_missing"]);
 
 export function sendDomainFailure(response: ServerResponse, code: string): void {
-  if (code === "invalid_input") {
-    sendError(response, 400, code, "");
+  if (code === "invalid_input" || code === "planning_validation_failure") {
+    sendError(response, 400, code === "planning_validation_failure" ? "invalid_input" : code, "");
+    return;
+  }
+  if (code === "planning_input_unavailable") {
+    sendError(response, 404, "not_found", "");
+    return;
+  }
+  if (code === "planning_service_failure") {
+    sendError(response, 500, "persistence_failure", "");
     return;
   }
   if (code === "not_found" || code === "object_scope_failure") {

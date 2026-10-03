@@ -2,7 +2,7 @@
 
 WayLoom Node.js + TypeScript API foundation.
 
-The server uses the Node.js `http` module. No second backend framework is added. Authentication stays on the Phase 3 routes. The core order, trip, loading, delivery, receipt, deferral, and exception routes call the domain modules and return the API contracts. `POST /api/planning/run` does not calculate a plan: the planning service has no planner yet, so that route and `GET /api/planning/:date` return the trips and deferrals already stored for the date.
+The server uses the Node.js `http` module. No second backend framework is added. Authentication stays on the Phase 3 routes. The core order, trip, loading, delivery, receipt, deferral, and exception routes call the domain modules and return the API contracts. `POST /api/planning/run` loads confirmed eligible orders and master data for the operational date, runs the Phase 5 `@wayloom/planning` engine, persists new trips and deferrals through the domain stores, and returns the same planning result shape as `GET /api/planning/:date` for that date.
 
 ## Commands
 

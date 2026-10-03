@@ -215,7 +215,7 @@ export async function createTrip(input: {
     if (error instanceof TripRejected) {
       return failure(error.code);
     }
-      return failure(persistenceCode(error));
+    return failure(persistenceCode(error));
   }
 }
 

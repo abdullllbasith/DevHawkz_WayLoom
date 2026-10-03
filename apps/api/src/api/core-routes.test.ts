@@ -17,8 +17,11 @@ import type { Logger } from "../log.js";
 import type { AuthUserRecord, UserDirectory } from "../security/auth.js";
 import { createCsrfToken } from "../security/csrf.js";
 import { createAuthenticatedSession, type SessionRecord, type SessionStore } from "../security/session.js";
+import { parsePlanningInput, planningScenarios } from "@wayloom/planning";
+import { buildPlanningInput, type PlanningMasterSnapshot } from "../domain/planning-context.js";
+import type { TripVehicle } from "../domain/trip.js";
 
-const now = new Date("2026-06-02T14:00:00.000Z");
+const now = new Date("2026-06-01T08:00:00.000Z");
 const outletA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const outletB = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
 const dispatcher = user("11111111-1111-4111-8111-111111111111", "seed.dispatcher", "DISPATCHER");
@@ -43,6 +46,7 @@ const receiptOrder = "dddddddd-dddd-4ddd-8ddd-ddddddddddd3";
 const earlyOrder = "dddddddd-dddd-4ddd-8ddd-ddddddddddd4";
 const receiptDelivery = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1";
 const earlyDelivery = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2";
+const planningVehicleUuid = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 
 test("core endpoints keep authorization, validation, and domain results", async () => {
   const sessions = memorySessions();
@@ -133,10 +137,11 @@ test("core endpoints keep authorization, validation, and domain results", async 
     assert.equal(ran.status, 200);
     const plan = (await ran.json()) as { operationalDate: string; trips: unknown[]; deferrals: { reason: string }[] };
     assert.equal(plan.operationalDate, "2026-06-02");
-    assert.equal(plan.trips.length, 1);
-    assert.equal(plan.deferrals[0]?.reason, "NO_CAPACITY");
+    assert.equal(world.tripRows.length, before + 1);
+    assert.equal(world.orderRows.find((item) => item.id === order.id)?.status, "PLANNED_ALLOCATED");
+    assert.equal(plan.trips.length >= 2, true);
+    assert.equal(plan.deferrals.some((item) => item.reason === "NO_CAPACITY"), true);
     assert.equal(JSON.stringify(plan).includes("ortools"), false);
-    assert.equal(world.tripRows.length, before);
     const readPlan = await fetch(url(server, "/api/planning/2026-06-02"), { headers: { cookie: dispatcherCookie } });
     assert.equal(readPlan.status, 200);
     const storedPlan = (await readPlan.json()) as { trips: { id: string; status: string }[] };
@@ -253,7 +258,9 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     deferrals: [{ id: randomUUID(), orderId: loadOrder, reason: "NO_CAPACITY", reportedAt: now }] as StoredDeferral[],
     exceptions: [] as StoredException[],
     receipts: [] as string[],
+    tripStops: [] as StoredStop[],
   };
+  state.tripStops.push(...state.trips.flatMap((trip) => trip.stops.map((stop) => ({ ...stop, tripId: trip.id }))));
   const ordersApi = orderStore();
   const core: CoreDependencies = {
     now: () => now,
@@ -261,7 +268,7 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     trips: tripStore(),
     loading: loadingStore(),
     deliveries: deliveryStore(),
-    deferrals: unusedStore<DeferralStore>(),
+    deferrals: deferralStore(),
     exceptions: {
       async create(input) {
         const row: StoredException = { ...input, id: randomUUID(), reportedByUserId: input.reportedByUserId };
@@ -308,8 +315,27 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     async listExceptions() {
       return state.exceptions;
     },
+    async loadPlanningRunContext(operationalDate: string) {
+      const master = memoryPlanningMaster(operationalDate);
+      if (master === null) {
+        return { ok: false as const, code: "planning_input_unavailable" };
+      }
+      const eligibleOrders = state.orders.filter(
+        (item) =>
+          item.orderDate === operationalDate &&
+          item.status === "CONFIRMED" &&
+          item.submittedAt !== null &&
+          !state.trips.some((trip) => trip.stops.some((stop) => stop.orderId === item.id)),
+      );
+      const committedTripCounts: Record<string, number> = { VEH001: 0 };
+      for (const trip of state.trips.filter((item) => item.operationalDate === operationalDate)) {
+        if (trip.vehicleId === planningVehicleUuid) {
+          committedTripCounts.VEH001 = (committedTripCounts.VEH001 ?? 0) + 1;
+        }
+      }
+      return buildPlanningInput(operationalDate, eligibleOrders, master, committedTripCounts);
+    },
   };
-  return Object.assign(core, { orderRows: state.orders, tripRows: state.trips });
 
   function orderStore(): OrderStore {
     return {
@@ -358,10 +384,24 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     };
   }
 
+  const planningVehicle: TripVehicle = {
+    id: planningVehicleUuid,
+    type: "van",
+    temp: "reefer",
+    weightCapKg: "1000",
+    volumeCapM3: "10",
+    depot: "Peliyagoda",
+    driverUserId: null,
+  };
+
   function tripStore(): TripStore {
     return {
       transaction: (work) => rollback(work, tripUnit()),
     };
+  }
+
+  function deferralStore(): DeferralStore {
+    return { transaction: (work) => rollback(work, deferralUnit()) };
   }
 
   function loadingStore(): LoadingStore {
@@ -379,20 +419,112 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
   function tripUnit(): import("../domain/trip.js").TripUnit {
     return {
       orders: orderStore(),
-      async findVehicle() { return null; },
-      async findAllocationOrder() { return null; },
-      async findTripById(id) { return state.trips.find((item) => item.id === id) ?? null; },
-      async tripSlotTaken() { return false; },
-      async countTrips() { return 0; },
-      async routeTaken() { return false; },
-      async orderHasStop() { return false; },
-      async createTrip() { throw new Error("the endpoint does not create a trip"); },
-      async createStop() { throw new Error("the endpoint does not create a stop"); },
+      async findVehicle(id) {
+        return id === planningVehicle.id ? planningVehicle : null;
+      },
+      async findAllocationOrder(id) {
+        const row = state.orders.find((item) => item.id === id);
+        if (row === undefined || row.status !== "CONFIRMED") return null;
+        return {
+          id: row.id,
+          status: row.status,
+          tempRequirement: row.tempRequirement,
+          orderWeightKg: row.orderWeightKg,
+          orderVolumeM3: row.orderVolumeM3,
+          brand: row.brand,
+          district: row.district,
+          depot: row.depot,
+          parkingConstraint: "normal",
+          windowOpen: "08:00",
+          windowClose: "12:00",
+          submittedAt: row.submittedAt,
+        };
+      },
+      async findTripById(id) {
+        const current = state.trips.find((item) => item.id === id);
+        return current === undefined ? null : { ...current, stops: current.stops.map((stop) => ({ ...stop, tripId: id })) };
+      },
+      async tripSlotTaken(vehicleId, operationalDate, tripNumber) {
+        return state.trips.some(
+          (trip) => trip.vehicleId === vehicleId && trip.operationalDate === operationalDate && trip.tripNumber === tripNumber,
+        );
+      },
+      async countTrips(vehicleId, operationalDate) {
+        return state.trips.filter((trip) => trip.vehicleId === vehicleId && trip.operationalDate === operationalDate).length;
+      },
+      async routeTaken() {
+        return false;
+      },
+      async orderHasStop(orderId) {
+        return state.tripStops.some((stop) => stop.orderId === orderId);
+      },
+      async createTrip(input) {
+        const trip: MemoryTrip = {
+          id: randomUUID(),
+          routeId: input.routeId,
+          operationalDate: input.operationalDate,
+          vehicleId: input.vehicleId,
+          depot: input.depot,
+          tripNumber: input.tripNumber,
+          status: "PLANNED",
+          stops: [],
+          vehicleDriverUserId: null,
+          outletIds: [],
+          loaderUserIds: [],
+        };
+        state.trips.push(trip);
+        return trip;
+      },
+      async createStop(input) {
+        const stop: StoredStop = {
+          id: randomUUID(),
+          tripId: input.tripId,
+          orderId: input.orderId,
+          sequence: input.sequence,
+          plannedArrival: input.plannedArrival,
+        };
+        state.tripStops.push(stop);
+        const trip = state.trips.find((item) => item.id === input.tripId);
+        if (trip !== undefined) {
+          trip.stops.push(stop);
+        }
+        return stop;
+      },
       async compareAndSetTripStatus(id, expected, next) {
         const current = state.trips.find((item) => item.id === id);
         if (current === undefined || current.status !== expected) return null;
         current.status = next;
-        return current;
+        return { ...current, stops: current.stops.map((stop) => ({ ...stop, tripId: id })) };
+      },
+    };
+  }
+
+  function deferralUnit(): import("../domain/deferral.js").DeferralUnit {
+    return {
+      orders: orderStore(),
+      async findOrder(id) {
+        const row = state.orders.find((item) => item.id === id);
+        if (row === undefined) return null;
+        return {
+          id: row.id,
+          status: row.status,
+          hasTripStop: state.tripStops.some((stop) => stop.orderId === row.id),
+          orderUnits: row.orderUnits,
+          orderWeightKg: row.orderWeightKg,
+          orderVolumeM3: row.orderVolumeM3,
+          tempRequirement: row.tempRequirement,
+          brand: row.brand,
+          district: row.district,
+          depot: row.depot,
+        };
+      },
+      async listByOrder(orderId) {
+        return state.deferrals.filter((item) => item.orderId === orderId);
+      },
+      async create(input) {
+        const row: StoredDeferral = { id: randomUUID(), orderId: input.orderId, reason: input.reason, reportedAt: input.reportedAt };
+        state.deferrals.push(row);
+        return row;
       },
     };
   }
@@ -526,7 +658,7 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
   }
 
   function facts(orderId: string): OrderTransitionFacts {
-    const stopIds = state.trips.flatMap((item) => item.stops).filter((stop) => stop.orderId === orderId).map((stop) => stop.id);
+    const stopIds = state.tripStops.filter((stop) => stop.orderId === orderId).map((stop) => stop.id);
     return {
       tripStopCount: stopIds.length,
       deferralCount: state.deferrals.filter((item) => item.orderId === orderId).length,
@@ -536,7 +668,12 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
   }
 
   async function rollback<TUnit, T>(work: (unit: TUnit) => Promise<T>, unit: TUnit): Promise<T> {
-    const snapshot = structuredClone(state);
+    let snapshot: typeof state;
+    try {
+      snapshot = cloneState(state);
+    } catch (error) {
+      throw new Error(`memory snapshot failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
     try {
       return await work(unit);
     } catch (error) {
@@ -548,9 +685,12 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
       state.deferrals.splice(0, state.deferrals.length, ...snapshot.deferrals);
       state.exceptions.splice(0, state.exceptions.length, ...snapshot.exceptions);
       state.receipts.splice(0, state.receipts.length, ...snapshot.receipts);
+      state.tripStops.splice(0, state.tripStops.length, ...snapshot.tripStops);
       throw error;
     }
   }
+
+  return Object.assign(core, { orderRows: state.orders, tripRows: state.trips });
 }
 
 type MemoryTrip = TripScope;
@@ -575,12 +715,32 @@ function order(id: string, deliveryId: string, status: StoredOrder["status"]): S
   };
 }
 
+function cloneState<T>(value: T): T {
+  return structuredClone(value);
+}
+
+function memoryPlanningMaster(operationalDate: string): PlanningMasterSnapshot | null {
+  const scenario = planningScenarios().find((item) => item.name === "planning_basic_feasible");
+  if (scenario === undefined) return null;
+  const parsed = parsePlanningInput(scenario.input);
+  if (!parsed.ok) return null;
+  return {
+    operationalDate,
+    calendar: { ...parsed.value.calendar, date: operationalDate },
+    travel: parsed.value.travel,
+    serviceAllowances: parsed.value.serviceAllowances,
+    vehicles: parsed.value.vehicles.map((vehicle) => ({ ...vehicle, id: planningVehicleUuid })),
+    outlets: parsed.value.outlets.map((outlet) => ({ ...outlet, id: outletA })),
+    vehicleUuidBySourceId: new Map([["VEH001", planningVehicleUuid]]),
+  };
+}
+
 function trip(id: string, driverUserId: string, status: MemoryTrip["status"], operationalDate: string, stops: StoredStop[]): MemoryTrip {
   return {
     id,
     routeId: null,
     operationalDate,
-    vehicleId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+    vehicleId: planningVehicleUuid,
     depot: "Peliyagoda",
     tripNumber: 1,
     status,
@@ -605,10 +765,6 @@ function delivery(id: string, tripStopId: string): StoredDelivery {
     deliveredUnits: 10,
     notes: null,
   };
-}
-
-function unusedStore<T>(): T {
-  return { transaction: async () => { throw new Error("unused"); } } as T;
 }
 
 function user(id: string, loginIdentifier: string, role: AuthUserRecord["role"]): AuthUserRecord {

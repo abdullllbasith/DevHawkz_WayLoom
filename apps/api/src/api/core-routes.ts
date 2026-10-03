@@ -37,6 +37,8 @@ import { confirmOrder, createOrder, getOrder, submitOrder } from "../domain/orde
 import type { OrderActor, OrderStatusName, OrderStore, StoredOrder } from "../domain/order.js";
 import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
+import type { PlanningContextLoadResult } from "../domain/planning-context.js";
+import { executePlanningRun } from "../domain/planning-run.js";
 import { confirmTrip } from "../domain/trip.js";
 import type { StoredTrip, TripStore } from "../domain/trip.js";
 import { sendJson } from "../errors.js";
@@ -79,6 +81,7 @@ export type CoreDependencies = {
   listLoading(loaderUserId: string): Promise<StoredLoading[]>;
   deliveryIdsForOrder(orderId: string): Promise<string[]>;
   listExceptions(): Promise<StoredException[]>;
+  loadPlanningRunContext(operationalDate: string): Promise<PlanningContextLoadResult>;
 };
 
 export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
@@ -97,8 +100,8 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
       confirmReceiptRoute(deps, context, response, request), /^\/api\/orders\/[^/]+\/receipt$/),
     route("GET", "/api/orders/:id", ["DISPATCHER", "STORE_MANAGER"], (context, response, request) =>
       getOrderRoute(deps, context, response, request), /^\/api\/orders\/[^/]+$/),
-    route("POST", "/api/planning/run", ["DISPATCHER"], (_context, response, request) =>
-      runPlanning(deps, response, request),
+    route("POST", "/api/planning/run", ["DISPATCHER"], (context, response, request) =>
+      runPlanning(deps, context, response, request),
     ),
     route("GET", "/api/planning/:date", ["DISPATCHER"], (_context, response, request) =>
       readPlanning(deps, response, request), /^\/api\/planning\/[^/]+$/),
@@ -251,7 +254,12 @@ async function confirmOrderRoute(
   sendJson(response, 200, toOrderResponse(confirmed.order));
 }
 
-async function runPlanning(deps: CoreDependencies, response: ServerResponse, request: IncomingMessage): Promise<void> {
+async function runPlanning(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
   const body = await readJson(request);
   if (body === "invalid") {
     sendDomainFailure(response, "invalid_input");
@@ -260,6 +268,18 @@ async function runPlanning(deps: CoreDependencies, response: ServerResponse, req
   const parsed = parsePlanningRunRequest(body);
   if (!parsed.ok) {
     sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const planningContext = await deps.loadPlanningRunContext(parsed.value.operationalDate);
+  const executed = await executePlanningRun({
+    actor: actor(context),
+    context: planningContext,
+    now: deps.now(),
+    trips: deps.trips,
+    deferrals: deps.deferrals,
+  });
+  if (!executed.ok) {
+    sendDomainFailure(response, executed.code);
     return;
   }
   sendJson(response, 200, await planningResult(deps, parsed.value.operationalDate));

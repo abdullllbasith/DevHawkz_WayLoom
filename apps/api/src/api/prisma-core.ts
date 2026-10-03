@@ -11,6 +11,7 @@ import { prismaOrderStore } from "../domain/order-store.js";
 import { prismaReceiptStore } from "../domain/receipt-store.js";
 import type { StoredTrip, TripStatusName } from "../domain/trip.js";
 import { prismaTripStore } from "../domain/trip-store.js";
+import { loadPlanningRunContext } from "./planning-load.js";
 import type { CoreDependencies, OrderListFilter, TripScope } from "./core-routes.js";
 
 export function prismaCore(prisma: PrismaClient): Omit<CoreDependencies, "now"> {
@@ -45,6 +46,9 @@ export function prismaCore(prisma: PrismaClient): Omit<CoreDependencies, "now"> 
     },
     listExceptions() {
       return listExceptions(prisma);
+    },
+    loadPlanningRunContext(operationalDate) {
+      return loadPlanningRunContext(prisma, operationalDate);
     },
   };
 }
