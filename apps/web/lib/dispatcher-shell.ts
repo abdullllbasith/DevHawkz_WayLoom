@@ -3,11 +3,13 @@ export const DISPATCHER_ROLE = "DISPATCHER";
 export const dispatcherNavigation = [
   { label: "Dashboard", href: "/dispatcher" },
   { label: "Orders", href: "/dispatcher/orders" },
-  { label: "Planning & Allocation", href: "/dispatcher/planning" },
-  { label: "Allocation Confirmation", href: "/dispatcher/allocation-confirmation" },
+  { label: "AI Planning", href: "/dispatcher/planning" },
+  { label: "Vehicles", href: "/dispatcher/vehicles" },
   { label: "Routes", href: "/dispatcher/routes" },
-  { label: "Deferrals", href: "/dispatcher/deferrals" },
-  { label: "Exceptions", href: "/dispatcher/exceptions" },
+  { label: "Workflow", href: "/dispatcher/workflow" },
+  { label: "Analytics", href: "/dispatcher/analytics" },
+  { label: "Reports", href: "/dispatcher/reports" },
+  { label: "Settings", href: "/dispatcher/settings" },
 ] as const;
 
 export type DispatcherAccess = "anonymous" | "forbidden" | "allowed";
@@ -45,6 +47,9 @@ function sessionRecord(value: unknown): Record<string, unknown> | null {
 export function activeDispatcherHref(pathname: string): string | null {
   if (pathname === "/dispatcher") return "/dispatcher";
   if (pathname === "/dispatcher/routes" || pathname.startsWith("/dispatcher/routes/")) return "/dispatcher/routes";
+  if (pathname === "/dispatcher/planning" || pathname.startsWith("/dispatcher/planning/") || pathname.startsWith("/dispatcher/allocation-confirmation")) {
+    return "/dispatcher/planning";
+  }
   const match = dispatcherNavigation.find((item) => item.href !== "/dispatcher" && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
   return match?.href ?? null;
 }

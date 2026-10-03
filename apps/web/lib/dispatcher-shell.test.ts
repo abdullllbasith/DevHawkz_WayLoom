@@ -26,20 +26,28 @@ test("primary navigation resolves to the submitted dispatcher routes", () => {
     "/dispatcher",
     "/dispatcher/orders",
     "/dispatcher/planning",
-    "/dispatcher/allocation-confirmation",
+    "/dispatcher/vehicles",
     "/dispatcher/routes",
-    "/dispatcher/deferrals",
-    "/dispatcher/exceptions",
+    "/dispatcher/workflow",
+    "/dispatcher/analytics",
+    "/dispatcher/reports",
+    "/dispatcher/settings",
   ]);
   assert.equal(activeDispatcherHref("/dispatcher"), "/dispatcher");
   assert.equal(activeDispatcherHref("/dispatcher/orders"), "/dispatcher/orders");
   assert.equal(activeDispatcherHref("/dispatcher/planning"), "/dispatcher/planning");
-  assert.equal(activeDispatcherHref("/dispatcher/allocation-confirmation"), "/dispatcher/allocation-confirmation");
+  assert.equal(activeDispatcherHref("/dispatcher/allocation-confirmation"), "/dispatcher/planning");
+  assert.equal(activeDispatcherHref("/dispatcher/vehicles"), "/dispatcher/vehicles");
   assert.equal(activeDispatcherHref("/dispatcher/routes"), "/dispatcher/routes");
   assert.equal(activeDispatcherHref("/dispatcher/routes/route-1"), "/dispatcher/routes");
-  assert.equal(activeDispatcherHref("/dispatcher/deferrals"), "/dispatcher/deferrals");
-  assert.equal(activeDispatcherHref("/dispatcher/exceptions"), "/dispatcher/exceptions");
+  assert.equal(activeDispatcherHref("/dispatcher/workflow"), "/dispatcher/workflow");
+  assert.equal(activeDispatcherHref("/dispatcher/analytics"), "/dispatcher/analytics");
+  assert.equal(activeDispatcherHref("/dispatcher/reports"), "/dispatcher/reports");
+  assert.equal(activeDispatcherHref("/dispatcher/settings"), "/dispatcher/settings");
   assert.equal(activeDispatcherHref("/dispatcher/orders/extra"), "/dispatcher/orders");
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Deferrals"), false);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Exceptions"), false);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Allocation Confirmation"), false);
 });
 
 test("session identity, logout, and the narrow shell stay inside the approved boundary", () => {
@@ -52,6 +60,6 @@ test("session identity, logout, and the narrow shell stay inside the approved bo
   assert.equal(shellNavigationMode(1280), "desktop");
   assert.equal(shellNavigationMode(1024), "desktop");
   assert.equal(shellNavigationMode(1023), "narrow");
-  assert.equal(JSON.stringify(dispatcherNavigation).includes("Analytics"), false);
-  assert.equal(JSON.stringify(dispatcherNavigation).includes("AI"), false);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "AI Planning"), true);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Analytics"), true);
 });

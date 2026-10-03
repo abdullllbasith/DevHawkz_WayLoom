@@ -22,7 +22,13 @@ export default function DispatcherPlanningPage() {
   async function load() {
     const ordersResponse = await fetch("/api/orders", { cache: "no-store" });
     const ordersPayload: unknown = await ordersResponse.json().catch(() => null);
-    const loadedOrders = ordersResponse.ok ? readOrderList(ordersPayload) : [];
+    if (!ordersResponse.ok) {
+      setOrders([]);
+      setView(emptyView);
+      setError("Planning data could not be loaded.");
+      return;
+    }
+    const loadedOrders = readOrderList(ordersPayload);
     const date = latestOrderDate(loadedOrders);
     let next = emptyView;
     if (date !== null) {
@@ -167,15 +173,17 @@ export default function DispatcherPlanningPage() {
             </table>
           )}
         </div>
-        <div className="dashboard-card">
-          <h3 className="bottom-card-title">{activeTrip ? `${activeTrip.vehicleId} trip ${activeTrip.tripNumber}` : "Route overview"}</h3>
-          <p className="kpi-subtitle">Distance, duration, and map geometry are not in the planning result.</p>
-          <ul>
+        <div className="dashboard-card planning-route-card">
+          <h3 className="route-card-title">{activeTrip ? `${activeTrip.vehicleId} trip ${activeTrip.tripNumber}` : "Route overview"}</h3>
+          <div className="routes-map-container" role="img" aria-label="Route map unavailable">
+            <p className="kpi-subtitle">Map geometry, distance, and duration are not in the planning result.</p>
+          </div>
+          <ul className="loader-checklist">
             {(activeTrip?.stops ?? []).map((stop) => {
               const order = orderById.get(stop.orderId);
-              return <li key={stop.id}>{stop.sequence}. {order?.orderId ?? stop.orderId} {order?.outlet ?? ""} {stop.plannedArrival ?? "—"}</li>;
+              return <li key={stop.id} className="loader-check-item">{stop.sequence}. {order?.orderId ?? stop.orderId} {order?.outlet ?? "—"} {stop.plannedArrival ?? "—"}</li>;
             })}
-            {(activeTrip?.stops.length ?? 0) === 0 && <li>No stops loaded.</li>}
+            {(activeTrip?.stops.length ?? 0) === 0 && <li className="loader-check-item">No stops loaded.</li>}
           </ul>
         </div>
       </section>
@@ -184,6 +192,13 @@ export default function DispatcherPlanningPage() {
         <div className="dashboard-card">
           <h3 className="bottom-card-title">Deferred orders ({view.deferrals.length})</h3>
           <p className="kpi-subtitle">Suggested actions are not provided. Reason codes stay as returned.</p>
+          <ul className="loader-checklist">
+            {view.deferrals.map((deferral) => {
+              const order = orderById.get(deferral.orderId);
+              return <li key={deferral.id} className="loader-check-item">{order?.orderId ?? deferral.orderId} · {deferral.reason}</li>;
+            })}
+            {view.deferrals.length === 0 && <li className="loader-check-item">No deferred orders.</li>}
+          </ul>
         </div>
         <div className="dashboard-card">
           <h3 className="bottom-card-title">Plan constraints</h3>
@@ -206,7 +221,7 @@ export default function DispatcherPlanningPage() {
             {busy === "run" ? "Running planning..." : "Run planning"}
           </button>
           <button type="button" className="btn-approve-plan" onClick={() => void confirmTrips()} disabled={view.trips.every((trip) => trip.status !== "PLANNED") || busy !== null}>
-            {busy === "confirm" ? "Confirming allocation..." : "Approve plan & send to loader"}
+            {busy === "confirm" ? "Confirming allocation..." : "Approve plan"}
           </button>
         </div>
       </footer>

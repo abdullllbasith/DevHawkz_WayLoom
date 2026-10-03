@@ -24,7 +24,7 @@ export function preserveConstraintReason(reasonCode: string): string {
 export function confirmationCards(input: { confirmedTrips: number; scheduledStops: number; deferred: number }) {
   return [
     { id: "vehicles", count: String(input.confirmedTrips), label: "Confirmed trips", pillText: "From trip status" },
-    { id: "orders", count: String(input.scheduledStops), label: "Stops on confirmed trips", pillText: `${input.deferred} deferred` },
+    { id: "orders", count: String(input.scheduledStops), label: "Scheduled orders", pillText: `${input.deferred} deferred` },
     { id: "on-time", count: "—", label: "Estimated on-time", pillText: "Not in the planning result" },
     { id: "fuel", count: "—", label: "Estimated fuel", pillText: "Not in the planning result" },
   ];

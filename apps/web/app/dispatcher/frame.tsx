@@ -32,17 +32,17 @@ export function DispatcherFrame({
   if (isAllocationConfirmationPage) {
     breadcrumb = "Dispatcher > AI Planning > AI Planning Results > Approved";
     title = "AI Planning Results";
-    subtitle = "Review AI recommendations, optimize routes and approve the delivery plan";
+    subtitle = "Review the planning result and confirm the delivery plan";
     dateText = "Operational date";
   } else if (isPlanningPage) {
     breadcrumb = "Dispatcher > AI Planning > AI Planning Results";
     title = "AI Planning Results";
-    subtitle = "Review AI recommendations, optimize routes and approve the delivery plan";
+    subtitle = "Review the planning result and confirm the delivery plan";
     dateText = "Operational date";
   } else if (isOrdersPage) {
     breadcrumb = "Dispatcher > Orders > All Orders";
     title = "Orders";
-    subtitle = "View, manage and select orders for delivery planning.";
+    subtitle = "View orders for delivery planning.";
     dateText = "Operational date";
   } else if (!isDashboardPage) {
     const matched = dispatcherNavigation.find((i) => i.href === active);
@@ -130,7 +130,7 @@ export function DispatcherFrame({
               />
             </div>
 
-            <button type="button" className="dispatcher-date-btn" aria-label="Select date">
+            <button type="button" className="dispatcher-date-btn" aria-label={dateText} disabled>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -152,7 +152,7 @@ export function DispatcherFrame({
                 {avatarInitials(displayName)}
               </div>
               <div className="dispatcher-user-meta">
-                <span className="dispatcher-user-name">{displayName || "J. Kumara"}</span>
+                <span className="dispatcher-user-name">{displayName || "—"}</span>
                 <span className="dispatcher-user-role">Dispatcher</span>
               </div>
             </div>
@@ -166,7 +166,7 @@ export function DispatcherFrame({
 }
 
 function avatarInitials(name: string): string {
-  if (!name) return "JK";
+  if (!name) return "—";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return (parts[0]?.substring(0, 2) ?? "JK").toUpperCase();
   return `${parts[0]?.[0] ?? "J"}${parts[parts.length - 1]?.[0] ?? "K"}`.toUpperCase();
@@ -193,17 +193,20 @@ function navIcon(label: string) {
           <polyline points="10 9 9 9 8 9" />
         </svg>
       );
-    case "Planning & Allocation":
+    case "AI Planning":
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
         </svg>
       );
-    case "Allocation Confirmation":
+    case "Vehicles":
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
+          <rect x="1" y="3" width="15" height="13" />
+          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+          <circle cx="5.5" cy="18.5" r="2.5" />
+          <circle cx="18.5" cy="18.5" r="2.5" />
         </svg>
       );
     case "Routes":
@@ -212,6 +215,34 @@ function navIcon(label: string) {
           <circle cx="6" cy="19" r="3" />
           <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" />
           <circle cx="18" cy="5" r="3" />
+        </svg>
+      );
+    case "Workflow":
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      );
+    case "Analytics":
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      );
+    case "Reports":
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      );
+    case "Settings":
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.05 1.41 1.2H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       );
     case "Deferrals":

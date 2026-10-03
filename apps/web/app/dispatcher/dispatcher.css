@@ -3121,6 +3121,14 @@ html:has(.dispatcher-shell) body {
   background: #f8fafc;
 }
 
+.btn-view-manifest:disabled,
+.edit-plan-btn:disabled,
+.planning-tab-btn:disabled,
+.dispatcher-date-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Next Steps Timeline Panel */
 .btn-return-dashboard {
   padding: 6px 14px;
