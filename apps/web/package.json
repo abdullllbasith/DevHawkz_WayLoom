@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --experimental-strip-types --test lib/dispatcher-shell.test.ts lib/dispatcher-dashboard.test.ts lib/dispatcher-orders.test.ts lib/auth-client.test.ts"
+    "test": "node --experimental-strip-types --test lib/dispatcher-shell.test.ts lib/dispatcher-dashboard.test.ts lib/dispatcher-orders.test.ts lib/auth-client.test.ts lib/dispatcher-planning.test.ts"
   },
   "dependencies": {
     "next": "16.3.8",

@@ -20,6 +20,7 @@ export function DispatcherFrame({
   const active = activeDispatcherHref(pathname);
 
   const isOrdersPage = pathname.startsWith("/dispatcher/orders");
+  const isPlanningPage = pathname.startsWith("/dispatcher/planning");
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
@@ -27,7 +28,12 @@ export function DispatcherFrame({
   let subtitle = "Today, 12 Sep 2026";
   let dateText = "13 Sep 2026 (Today)";
 
-  if (isOrdersPage) {
+  if (isPlanningPage) {
+    breadcrumb = "Dispatcher > AI Planning > AI Planning Results";
+    title = "AI Planning Results";
+    subtitle = "Review AI recommendations, optimize routes and approve the delivery plan";
+    dateText = "13 Sep 2025 (Today)";
+  } else if (isOrdersPage) {
     breadcrumb = "Dispatcher > Orders > All Orders";
     title = "Orders";
     subtitle = "View, manage and select orders for delivery planning.";
