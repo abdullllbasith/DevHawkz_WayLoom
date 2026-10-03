@@ -91,11 +91,35 @@ test("core endpoints keep authorization, validation, and domain results", async 
     const otherOutlet = await fetch(url(server, `/api/orders?outletId=${outletB}`), { headers: { cookie: managerCookie } });
     assert.equal(otherOutlet.status, 200);
     assert.deepEqual(await otherOutlet.json(), []);
+    const earlyClose = await send(server, `/api/orders/${order.id}/confirm`, dispatcherCookie, {});
+    assert.equal(earlyClose.status, 409);
+    assert.equal(((await earlyClose.json()) as { error: { code: string } }).error.code, "INVALID_STATE_TRANSITION");
     const submitted = await send(server, `/api/orders/${order.id}/submit`, managerCookie, {});
     assert.equal(submitted.status, 200);
     assert.equal(((await submitted.json()) as { status: string }).status, "SUBMITTED");
     const skipped = await send(server, `/api/orders/${order.id}/submit`, managerCookie, { status: "DELIVERED" });
     assert.equal(skipped.status, 400);
+    const closed = await send(server, `/api/orders/${order.id}/confirm`, dispatcherCookie, {});
+    assert.equal(closed.status, 200);
+    const closedOrder = (await closed.json()) as { status: string; submittedAt: string | null };
+    assert.equal(closedOrder.status, "CONFIRMED");
+    assert.equal(closedOrder.submittedAt, now.toISOString());
+    const repeatedClose = await send(server, `/api/orders/${order.id}/confirm`, dispatcherCookie, {});
+    assert.equal(repeatedClose.status, 409);
+    assert.equal(((await repeatedClose.json()) as { error: { code: string } }).error.code, "INVALID_STATE_TRANSITION");
+    const loaderClose = await send(server, `/api/orders/${order.id}/confirm`, loaderCookie, {});
+    assert.equal(loaderClose.status, 403);
+    const managerClose = await send(server, `/api/orders/${order.id}/confirm`, managerCookie, {});
+    assert.equal(managerClose.status, 403);
+    const extraClose = await send(server, `/api/orders/${order.id}/confirm`, dispatcherCookie, { status: "CONFIRMED" });
+    assert.equal(extraClose.status, 400);
+    const missingCloseCsrf = await fetch(url(server, `/api/orders/${order.id}/confirm`), {
+      method: "POST",
+      headers: { cookie: dispatcherCookie, "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    assert.equal(missingCloseCsrf.status, 403);
+    assert.equal(((await missingCloseCsrf.json()) as { error: { code: string } }).error.code, "CSRF_INVALID");
 
     const planned = await send(server, "/api/planning/run", loaderCookie, { operationalDate: "2026-06-02" });
     assert.equal(planned.status, 403);

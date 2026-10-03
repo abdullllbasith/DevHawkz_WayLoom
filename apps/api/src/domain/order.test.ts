@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  confirmOrder,
   createOrder,
   getOrder,
   submitOrder,
@@ -149,6 +150,57 @@ test("submission preserves source facts and rejects the wrong actor or state", a
   assert.deepEqual(confirmed, { ok: false, code: "lifecycle_conflict" });
 });
 
+test("a dispatcher confirms a submitted order and a repeated close conflicts", async () => {
+  const store = memoryStore();
+  const created = await createOrder({ actor: manager([outletA]), command: validCommand(), store });
+  assert.equal(created.ok, true);
+  if (!created.ok) {
+    return;
+  }
+  const early = await confirmOrder({
+    actor: dispatcher(),
+    orderId: created.order.id,
+    now,
+    store,
+  });
+  assert.deepEqual(early, { ok: false, code: "lifecycle_conflict" });
+  assert.equal(store.orders[0]?.status, "DRAFT");
+  const submitted = await submitOrder({
+    actor: manager([outletA]),
+    orderId: created.order.id,
+    now,
+    store,
+  });
+  assert.equal(submitted.ok, true);
+  const denied = await confirmOrder({
+    actor: manager([outletA]),
+    orderId: created.order.id,
+    now,
+    store,
+  });
+  assert.deepEqual(denied, { ok: false, code: "authorization_failure" });
+  const confirmed = await confirmOrder({
+    actor: dispatcher(),
+    orderId: created.order.id,
+    now,
+    store,
+  });
+  assert.equal(confirmed.ok, true);
+  if (!confirmed.ok) {
+    return;
+  }
+  assert.equal(confirmed.order.status, "CONFIRMED");
+  assert.equal(confirmed.order.submittedAt?.toISOString(), now.toISOString());
+  const repeated = await confirmOrder({
+    actor: dispatcher(),
+    orderId: created.order.id,
+    now,
+    store,
+  });
+  assert.deepEqual(repeated, { ok: false, code: "lifecycle_conflict" });
+  assert.equal(store.orders[0]?.status, "CONFIRMED");
+});
+
 test("reads use the server actor and do not trust a client role", async () => {
   const store = memoryStore();
   const created = await createOrder({ actor: manager([outletA]), command: validCommand(), store });
@@ -188,6 +240,10 @@ test("the order store does not persist outlet master copies or planning fields",
   assert.equal(source.includes("status: \"DRAFT\""), true);
   assert.equal(source.includes("status: \"SUBMITTED\""), true);
 });
+
+function dispatcher(): OrderActor {
+  return { userId: dispatcherId, role: "DISPATCHER", assignedOutletIds: [] };
+}
 
 function manager(assignedOutletIds: readonly string[], userId = managerId): OrderActor {
   return { userId, role: "STORE_MANAGER", assignedOutletIds };

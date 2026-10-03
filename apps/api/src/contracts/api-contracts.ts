@@ -323,6 +323,10 @@ export function parseSubmitOrderRequest(value: unknown): ContractResult<Record<s
   return parseEmpty(value);
 }
 
+export function parseConfirmOrderRequest(value: unknown): ContractResult<Record<string, never>> {
+  return parseEmpty(value);
+}
+
 export function parsePlanningRunRequest(value: unknown): ContractResult<PlanningRunRequest> {
   const record = recordWithKeys(value, ["operationalDate"]);
   if (record === null) {

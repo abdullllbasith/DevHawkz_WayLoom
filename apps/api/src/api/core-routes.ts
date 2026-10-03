@@ -7,6 +7,7 @@ import {
   parseDeliveryOutcomeRequest,
   parseExceptionListQuery,
   parseOrderListQuery,
+  parseConfirmOrderRequest,
   parsePlanningDate,
   parsePlanningRunRequest,
   parseProofRequest,
@@ -32,7 +33,7 @@ import { recordException } from "../domain/exception.js";
 import type { ExceptionStore, StoredException } from "../domain/exception.js";
 import { reportShortfall, verifyLoading } from "../domain/loading.js";
 import type { LoadingStore, StoredLoading } from "../domain/loading.js";
-import { createOrder, getOrder, submitOrder } from "../domain/order.js";
+import { confirmOrder, createOrder, getOrder, submitOrder } from "../domain/order.js";
 import type { OrderActor, OrderStatusName, OrderStore, StoredOrder } from "../domain/order.js";
 import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
@@ -90,6 +91,8 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
     ),
     route("POST", "/api/orders/:id/submit", ["STORE_MANAGER"], (context, response, request) =>
       submitOrderRoute(deps, context, response, request), /^\/api\/orders\/[^/]+\/submit$/),
+    route("POST", "/api/orders/:id/confirm", ["DISPATCHER"], (context, response, request) =>
+      confirmOrderRoute(deps, context, response, request), /^\/api\/orders\/[^/]+\/confirm$/),
     route("POST", "/api/orders/:id/receipt", ["STORE_MANAGER"], (context, response, request) =>
       confirmReceiptRoute(deps, context, response, request), /^\/api\/orders\/[^/]+\/receipt$/),
     route("GET", "/api/orders/:id", ["DISPATCHER", "STORE_MANAGER"], (context, response, request) =>
@@ -226,6 +229,26 @@ async function submitOrderRoute(
     return;
   }
   sendJson(response, 200, toOrderResponse(submitted.order));
+}
+
+async function confirmOrderRoute(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const orderId = pathId(request, /^\/api\/orders\/([^/]+)\/confirm$/);
+  const body = await readJson(request);
+  if (orderId === null || body === "invalid" || !parseConfirmOrderRequest(body).ok) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const confirmed = await confirmOrder({ actor: actor(context), orderId, now: deps.now(), store: deps.orders });
+  if (!confirmed.ok) {
+    sendDomainFailure(response, confirmed.code);
+    return;
+  }
+  sendJson(response, 200, toOrderResponse(confirmed.order));
 }
 
 async function runPlanning(deps: CoreDependencies, response: ServerResponse, request: IncomingMessage): Promise<void> {

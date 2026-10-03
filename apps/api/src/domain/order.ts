@@ -196,6 +196,25 @@ export async function submitOrder(input: {
   return submitted;
 }
 
+export async function confirmOrder(input: {
+  actor: OrderActor;
+  orderId: string;
+  now: Date;
+  store: OrderStore;
+}): Promise<OrderResult> {
+  const confirmed = await transitionOrder({
+    actor: input.actor,
+    orderId: input.orderId,
+    to: "CONFIRMED",
+    now: input.now,
+    store: input.store,
+  });
+  if (!confirmed.ok && confirmed.code === "invalid_transition") {
+    return failure("lifecycle_conflict");
+  }
+  return confirmed;
+}
+
 export async function getOrder(input: {
   actor: OrderActor;
   orderId: string;

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   logoutResponse,
+  parseConfirmOrderRequest,
   parseConfirmTripRequest,
   parseCreateExceptionRequest,
   parseCreateOrderRequest,
@@ -55,6 +56,8 @@ test("order, planning, loading, delivery, receipt, and deferral requests reject 
   }
   assert.deepEqual(parseSubmitOrderRequest({}), { ok: true, value: {} });
   assert.deepEqual(parseSubmitOrderRequest({ status: "SUBMITTED" }), { ok: false, code: "invalid_input" });
+  assert.deepEqual(parseConfirmOrderRequest({}), { ok: true, value: {} });
+  assert.deepEqual(parseConfirmOrderRequest({ status: "CONFIRMED" }), { ok: false, code: "invalid_input" });
   assert.deepEqual(parseOrderListQuery({ status: "Submitted", search: "fresh" }), { ok: false, code: "invalid_input" });
 
   assert.equal(parsePlanningRunRequest({ operationalDate: "2026-06-02" }).ok, true);
