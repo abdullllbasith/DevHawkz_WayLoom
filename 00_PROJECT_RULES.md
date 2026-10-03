@@ -324,6 +324,16 @@ Weekly fuel usage
 Weekly quota validation
 ```
 
+The approved trip distance is:
+
+```text
+trip_distance_km = depot_to_district_km + inter_stop_km × (number_of_stops - 1)
+```
+
+That distance is the input to fuel validation.
+
+The existing trip count is the count of committed Trip records for that vehicle and operational date. Zero uses trip 1, one uses trip 2, and two adds no candidate. A missing count is not zero.
+
 The implementation must clearly distinguish:
 
 - source fields

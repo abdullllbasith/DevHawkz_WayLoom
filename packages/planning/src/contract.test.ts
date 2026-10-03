@@ -5,6 +5,7 @@ import {
   CUTOFF_TIME_ZONE,
   FUEL_FORMULA,
   PLANNING_CONTRACT_VERSION,
+  TRIP_DISTANCE_FORMULA,
   TRIP_TIME_FORMULA,
   canonicalPlanningInput,
   parsePlanningFailure,
@@ -30,6 +31,7 @@ test("a versioned planning input accepts approved fields and sorts them", () => 
   assert.equal(first.value.cutoff.timeZone, CUTOFF_TIME_ZONE);
   assert.equal(canonicalPlanningInput(first.value), canonicalPlanningInput(second.value));
   assert.equal(TRIP_TIME_FORMULA.includes("service_allowance_min"), true);
+  assert.equal(TRIP_DISTANCE_FORMULA, "depot_to_district_km + inter_stop_km * (number_of_stops - 1)");
   assert.equal(FUEL_FORMULA, "trip_distance_km / km_per_l");
   assert.equal(planningDatasets.find((item) => item.dataset === "traffic_speed")?.consumption, "not_consumed");
   assert.equal(planningDatasets.find((item) => item.dataset === "road_conditions")?.consumption, "not_consumed");

@@ -214,7 +214,7 @@ Vehicle import stores the supplied vehicle fields, including `fuel_type`, `km_pe
 
 Calendar import stores the supplied calendar fields on `calendar_source`. `date` is a date. Flag and calendar-number fields are stored as integers. `festival` and `festival_ramp` stay text. The row is not a demand forecast or a planning result.
 
-District-travel, service-allowance, traffic-speed, and road-conditions imports store the supplied tokens as text. They do not copy those values onto Outlet, Vehicle, Order, Trip, or TripStop. `service_allowance_min` stays the source allowance. It is not an observed execution time. `depot_to_district_km`, `inter_stop_km`, and the freeflow minute fields stay source inputs. They are not calculated trip distance or trip duration.
+District-travel, service-allowance, traffic-speed, and road-conditions imports store the supplied tokens as text. They do not copy those values onto Outlet, Vehicle, Order, Trip, or TripStop. `service_allowance_min` stays the source allowance. It is not an observed execution time. `depot_to_district_km`, `inter_stop_km`, and the freeflow minute fields stay source inputs. Import does not write a trip distance or a trip duration. The approved planning distance is `depot_to_district_km + inter_stop_km × (number_of_stops - 1)`.
 
 A repeated import of the same source values inserts nothing. A conflicting source value is reported and does not overwrite the stored row.
 
@@ -247,7 +247,7 @@ These values are calculated later. They are not competition source fields, and t
 - a deferral reason from planning feasibility;
 - operational status from the domain workflow.
 
-The Phase 5 normalized planning object is contract version 1 in `packages/planning`. It carries the approved travel and service-allowance inputs. It does not calculate trip distance from those inputs. Cutoff eligibility is classified at `16:00:00` in `Asia/Colombo` (UTC+05:30), stated by the official Challenge Booklet, and that result is not stored. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
+The Phase 5 normalized planning object is contract version 1 in `packages/planning`. It carries the approved travel and service-allowance inputs. Trip distance for fuel is `depot_to_district_km + inter_stop_km × (number_of_stops - 1)`. The existing trip count is the count of committed Trip records for that vehicle and operational date: zero uses trip 1, one uses trip 2, and two adds no candidate. Cutoff eligibility is classified at `16:00:00` in `Asia/Colombo` (UTC+05:30), stated by the official Challenge Booklet, and that result is not stored. Traffic speed and road conditions are not inputs to the current trip-time or fuel formulas.
 
 ## Server-managed sessions
 

@@ -17,7 +17,12 @@ export const planningUnits = {
 export const TRIP_TIME_FORMULA =
   "depot_to_district_freeflow_min + inter_stop_freeflow_min * (orders - 1) + sum(service_allowance_min(brand, dock_type))" as const;
 
+export const TRIP_DISTANCE_FORMULA = "depot_to_district_km + inter_stop_km * (number_of_stops - 1)" as const;
+
 export const FUEL_FORMULA = "trip_distance_km / km_per_l" as const;
+
+/** Count of committed Trip records for one vehicle and operational date. 0 uses trip 1, 1 uses trip 2, and 2 adds no candidate. */
+export const EXISTING_TRIP_COUNT_SOURCE = "committed Trip records for vehicle_id and operational_date" as const;
 
 export const PROJECTED_FUEL_FORMULA = "existing_weekly_fuel_l + fuel_used_l" as const;
 
