@@ -65,9 +65,11 @@ const scenarios: PlanningScenario[] = [
   }, { deferralReason: "DEPOT_MISMATCH" }),
   scenario("planning_brand_mismatch", "Two orders of different brands cannot share one trip.", "brand_compatibility", "infeasible", "Fresh + Style", (input) => {
     addSecondOrder(input, { brand: "Style", district: "Colombo", depot: "Peliyagoda" });
+    input.serviceAllowances.push({ brand: "Style", dockType: "rear_dock", serviceAllowanceMin: "12" });
   }, { deferralReason: null }),
   scenario("planning_district_mismatch", "Two orders from different districts cannot share one trip.", "district_compatibility", "infeasible", "Colombo + Galle", (input) => {
     addSecondOrder(input, { brand: "Fresh", district: "Galle", depot: "Peliyagoda" });
+    input.travel.push({ ...input.travel[0], district: "Galle" });
   }, { deferralReason: null }),
   scenario("planning_window_open", "A planned arrival at the window opening is inside the window.", "delivery_window", "feasible", "08:00 == window_open", undefined, { plannedArrival: "08:00" }),
   scenario("planning_window_close", "A planned arrival at the window closing is inside the window.", "delivery_window", "feasible", "12:00 == window_close", undefined, { plannedArrival: "12:00" }),

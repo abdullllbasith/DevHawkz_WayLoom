@@ -21,6 +21,8 @@ export {
 } from "./contract.js";
 export { planningScenarios } from "./fixtures.js";
 export type { PlanningScenario, ScenarioClassification } from "./fixtures.js";
+export { validatePlanningInput, validationCategories } from "./validate.js";
+export type { PlanningValidationFailure, PlanningValidationResult, ValidationCategory } from "./validate.js";
 export type {
   ContractResult,
   DeferralReason,
