@@ -39,6 +39,7 @@ import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
 import type { PlanningContextLoadResult } from "../domain/planning-context.js";
 import { executePlanningRun } from "../domain/planning-run.js";
+import { applySyncBatch, parseSyncBatchBody, readSyncStatus, type SyncBatchStore } from "../domain/sync-batch.js";
 import { confirmTrip } from "../domain/trip.js";
 import type { StoredTrip, TripStore } from "../domain/trip.js";
 import { sendJson } from "../errors.js";
@@ -73,6 +74,7 @@ export type CoreDependencies = {
   deferrals: DeferralStore;
   exceptions: ExceptionStore;
   receipts: ReceiptStore;
+  sync: SyncBatchStore;
   listOrders(filter: OrderListFilter): Promise<StoredOrder[]>;
   findTripScope(id: string): Promise<TripScope | null>;
   listDriverTrips(driverUserId: string): Promise<StoredTrip[]>;
@@ -122,6 +124,12 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
       deliveryOutcomeRoute(deps, context, response, request), /^\/api\/deliveries\/[^/]+\/outcome$/),
     route("POST", "/api/deliveries/:id/pod", ["DRIVER"], (context, response, request) =>
       deliveryProofRoute(deps, context, response, request), /^\/api\/deliveries\/[^/]+\/pod$/),
+    route("POST", "/api/sync/batch", ["DRIVER"], (context, response, request) =>
+      syncBatchRoute(deps, context, response, request),
+    ),
+    route("GET", "/api/sync/status", ["DRIVER"], (context, response, request) =>
+      syncStatusRoute(deps, context, response, request),
+    ),
     route("GET", "/api/exceptions", ["DISPATCHER"], (_context, response, request) =>
       listExceptionRoute(deps, response, request),
     ),
@@ -497,6 +505,64 @@ async function deliveryProofRoute(
     return;
   }
   sendJson(response, 201, toProofResponse(proof.proof));
+}
+
+async function syncBatchRoute(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const body = await readJson(request);
+  if (body === "invalid") {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const batch = parseSyncBatchBody(body);
+  if (batch === null) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const results = await applySyncBatch({
+    actor: actor(context),
+    events: batch.events,
+    now: deps.now(),
+    store: deps.sync,
+  });
+  sendJson(response, 200, { results });
+}
+
+async function syncStatusRoute(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const clientEventIds = parseSyncStatusQuery(request);
+  if (clientEventIds === null) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const results = await readSyncStatus({
+    actor: actor(context),
+    clientEventIds,
+    store: deps.sync,
+    deliveries: deps.deliveries,
+  });
+  sendJson(response, 200, { results });
+}
+
+function parseSyncStatusQuery(request: IncomingMessage): string[] | null {
+  const params = new URL(request.url ?? "/", "http://127.0.0.1").searchParams;
+  const keys = [...new Set(params.keys())];
+  if (keys.length !== 1 || keys[0] !== "clientEventId") {
+    return null;
+  }
+  const clientEventIds = params.getAll("clientEventId");
+  if (clientEventIds.length === 0 || clientEventIds.some((id) => id.length === 0 || id.trim() !== id)) {
+    return null;
+  }
+  return clientEventIds;
 }
 
 async function confirmReceiptRoute(

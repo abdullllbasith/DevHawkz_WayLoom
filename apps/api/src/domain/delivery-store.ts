@@ -17,6 +17,15 @@ export function prismaDeliveryStore(prisma: PrismaClient): DeliveryStore {
   };
 }
 
+export function deliveryStoreBound(prisma: DeliveryDatabase): DeliveryStore {
+  const unit = deliveryUnit(prisma);
+  return {
+    transaction(work) {
+      return work(unit);
+    },
+  };
+}
+
 function deliveryUnit(prisma: DeliveryDatabase): DeliveryUnit {
   return {
     orders: prismaOrderStore(prisma),

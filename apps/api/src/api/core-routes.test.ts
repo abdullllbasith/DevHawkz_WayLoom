@@ -12,6 +12,7 @@ import type { ExceptionStore, StoredException } from "../domain/exception.js";
 import type { LoadingStore, StoredLoading } from "../domain/loading.js";
 import type { OrderOutlet, OrderStore, OrderTransitionFacts, StoredOrder } from "../domain/order.js";
 import type { ReceiptStore } from "../domain/receipt.js";
+import type { StoredSyncEvent, SyncBatchStore } from "../domain/sync-batch.js";
 import type { StoredStop, TripStore } from "../domain/trip.js";
 import type { Logger } from "../log.js";
 import type { AuthUserRecord, UserDirectory } from "../security/auth.js";
@@ -218,6 +219,103 @@ test("core endpoints keep authorization, validation, and domain results", async 
   }
 });
 
+test("sync batch is idempotent and keeps delivery authorization", async () => {
+  const sessions = memorySessions();
+  const world = memoryCore();
+  const server = await listen(
+    createApp({
+      nodeEnv: "test",
+      log: silentLog(),
+      users: directory([dispatcher, loader, driver, otherDriver]),
+      sessions,
+      now: () => now,
+      assignedOutletIds: async () => [],
+      businessRoutes: coreRoutes(world),
+    }),
+  );
+  const driverCookie = await cookieFor(driver, sessions);
+  const otherDriverCookie = await cookieFor(otherDriver, sessions);
+  const loaderCookie = await cookieFor(loader, sessions);
+  const createdAt = "2026-06-07T09:00:00.000Z";
+  const outcome = {
+    clientEventId: "sync-outcome-1",
+    eventType: "delivery outcome",
+    targetId: deliveryStop,
+    clientCreatedAt: createdAt,
+    attemptCount: 1,
+    payload: { outcome: "left at gate" },
+  };
+  try {
+    assert.equal((await fetch(url(server, "/api/sync/batch"), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 401);
+    const missingCsrf = await fetch(url(server, "/api/sync/batch"), {
+      method: "POST",
+      headers: { cookie: driverCookie, "content-type": "application/json" },
+      body: JSON.stringify({ events: [outcome] }),
+    });
+    assert.equal(missingCsrf.status, 403);
+    assert.equal((await send(server, "/api/sync/batch", loaderCookie, { events: [outcome] })).status, 403);
+    assert.equal((await send(server, "/api/sync/batch", driverCookie, { events: "nope" })).status, 400);
+    assert.equal((await send(server, "/api/sync/batch", driverCookie, [])).status, 400);
+
+    const denied = await send(server, "/api/sync/batch", otherDriverCookie, { events: [outcome] });
+    assert.equal(denied.status, 200);
+    assert.equal(((await denied.json()) as { results: { clientEventId: string; result: string }[] }).results[0]?.result, "unauthorized");
+
+    const first = await send(server, "/api/sync/batch", driverCookie, { events: [outcome] });
+    assert.equal(first.status, 200);
+    assert.deepEqual((await first.json()) as { results: { clientEventId: string; result: string }[] }, {
+      results: [{ clientEventId: "sync-outcome-1", result: "applied" }],
+    });
+    const replay = await send(server, "/api/sync/batch", driverCookie, { events: [outcome] });
+    assert.equal(((await replay.json()) as { results: { result: string }[] }).results[0]?.result, "already applied");
+    const duplicate = await send(server, `/api/deliveries/${deliveryStop}/outcome`, driverCookie, { outcome: "handed over" });
+    assert.equal(duplicate.status, 409);
+    assert.equal(((await duplicate.json()) as { error: { code: string } }).error.code, "INVALID_STATE_TRANSITION");
+
+    const invalid = await send(server, "/api/sync/batch", driverCookie, {
+      events: [{ clientEventId: "sync-invalid", eventType: "loading shortfall", targetId: deliveryStop, clientCreatedAt: createdAt, attemptCount: 0, payload: {} }],
+    });
+    assert.deepEqual(((await invalid.json()) as { results: { clientEventId: string; result: string }[] }).results, [
+      { clientEventId: "sync-invalid", result: "validation rejected" },
+    ]);
+    const secret = await send(server, "/api/sync/batch", driverCookie, {
+      events: [{ ...outcome, clientEventId: "sync-secret", payload: { outcome: "left at gate", sessionToken: "secret" } }],
+    });
+    assert.equal(((await secret.json()) as { results: { result: string }[] }).results[0]?.result, "validation rejected");
+
+    const batch = await send(server, "/api/sync/batch", driverCookie, {
+      events: [
+        { clientEventId: "sync-proof-1", eventType: "proof of delivery", targetId: deliveryStop, clientCreatedAt: createdAt, attemptCount: 0, payload: { evidenceReference: "gate note" } },
+        { ...outcome, clientEventId: "sync-outcome-2", payload: { outcome: "second try" } },
+        { clientEventId: "not-an-event" },
+      ],
+    });
+    assert.deepEqual(
+      ((await batch.json()) as { results: { result: string }[] }).results.map((item) => item.result),
+      ["applied", "conflict", "validation rejected"],
+    );
+    const proofReplay = await send(server, "/api/sync/batch", driverCookie, {
+      events: [{ clientEventId: "sync-proof-1", eventType: "proof of delivery", targetId: deliveryStop, clientCreatedAt: createdAt, attemptCount: 2, payload: { evidenceReference: "changed" } }],
+    });
+    assert.equal(((await proofReplay.json()) as { results: { result: string }[] }).results[0]?.result, "already applied");
+
+    const status = await fetch(url(server, "/api/sync/status?clientEventId=sync-outcome-1&clientEventId=missing-event"), { headers: { cookie: driverCookie } });
+    assert.equal(status.status, 200);
+    assert.deepEqual(await status.json(), {
+      results: [
+        { clientEventId: "sync-outcome-1", recorded: true, result: "already applied", errorCode: null },
+        { clientEventId: "missing-event", recorded: false },
+      ],
+    });
+    const hidden = await fetch(url(server, "/api/sync/status?clientEventId=sync-outcome-1"), { headers: { cookie: otherDriverCookie } });
+    assert.equal(((await hidden.json()) as { results: { result: string }[] }).results[0]?.result, "unauthorized");
+    assert.equal((await fetch(url(server, "/api/sync/status"))).status, 401);
+    assert.equal((await fetch(url(server, "/api/sync/status"), { headers: { cookie: loaderCookie } })).status, 403);
+  } finally {
+    await close(server);
+  }
+});
+
 function orderBody(): Record<string, unknown> {
   return {
     deliveryId: "ORD-100",
@@ -277,6 +375,7 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
       },
     } satisfies ExceptionStore,
     receipts: receiptStore(),
+    sync: syncStore(),
     async listOrders(filter) {
       return state.orders.filter((item) => {
         if (filter.outletIds !== undefined && !filter.outletIds.includes(item.outletId)) return false;
@@ -410,6 +509,48 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
 
   function deliveryStore(): DeliveryStore {
     return { transaction: (work) => rollback(work, deliveryUnit()) };
+  }
+
+  function syncStore(): SyncBatchStore {
+    const syncRows: StoredSyncEvent[] = [];
+    return {
+      async findByClientEventId(clientEventId) {
+        return syncRows.find((row) => row.clientEventId === clientEventId) ?? null;
+      },
+      async transaction(work) {
+        const snapshot = syncRows.map((row) => ({ ...row }));
+        try {
+          return await work({
+            deliveries: deliveryStore(),
+            async findByClientEventId(clientEventId) {
+              return syncRows.find((row) => row.clientEventId === clientEventId) ?? null;
+            },
+            async claim(event) {
+              if (syncRows.some((row) => row.clientEventId === event.clientEventId)) {
+                return "conflict";
+              }
+              syncRows.push({ ...event });
+              return "ok";
+            },
+            async release(clientEventId) {
+              const index = syncRows.findIndex((row) => row.clientEventId === clientEventId);
+              if (index >= 0) {
+                syncRows.splice(index, 1);
+              }
+            },
+            async recordError(clientEventId, errorCode) {
+              const row = syncRows.find((item) => item.clientEventId === clientEventId);
+              if (row !== undefined) {
+                row.errorCode = errorCode;
+              }
+            },
+          });
+        } catch (error) {
+          syncRows.splice(0, syncRows.length, ...snapshot);
+          throw error;
+        }
+      },
+    };
   }
 
   function receiptStore(): ReceiptStore {

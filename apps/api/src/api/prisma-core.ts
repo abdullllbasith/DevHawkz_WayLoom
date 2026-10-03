@@ -9,6 +9,7 @@ import { prismaLoadingStore } from "../domain/loading-store.js";
 import type { StoredOrder } from "../domain/order.js";
 import { prismaOrderStore } from "../domain/order-store.js";
 import { prismaReceiptStore } from "../domain/receipt-store.js";
+import { prismaSyncBatchStore } from "../domain/sync-event-store.js";
 import type { StoredTrip, TripStatusName } from "../domain/trip.js";
 import { prismaTripStore } from "../domain/trip-store.js";
 import { loadPlanningRunContext } from "./planning-load.js";
@@ -23,6 +24,7 @@ export function prismaCore(prisma: PrismaClient): Omit<CoreDependencies, "now"> 
     deferrals: prismaDeferralStore(prisma),
     exceptions: prismaExceptionStore(prisma),
     receipts: prismaReceiptStore(prisma),
+    sync: prismaSyncBatchStore(prisma),
     listOrders(filter) {
       return listOrders(prisma, filter);
     },
