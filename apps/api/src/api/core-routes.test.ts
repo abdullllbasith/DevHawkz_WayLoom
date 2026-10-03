@@ -88,6 +88,9 @@ test("core endpoints keep authorization, validation, and domain results", async 
     assert.equal(hidden.status, 403);
     const visible = await fetch(url(server, `/api/orders/${order.id}`), { headers: { cookie: managerCookie } });
     assert.equal(visible.status, 200);
+    const otherOutlet = await fetch(url(server, `/api/orders?outletId=${outletB}`), { headers: { cookie: managerCookie } });
+    assert.equal(otherOutlet.status, 200);
+    assert.deepEqual(await otherOutlet.json(), []);
     const submitted = await send(server, `/api/orders/${order.id}/submit`, managerCookie, {});
     assert.equal(submitted.status, 200);
     assert.equal(((await submitted.json()) as { status: string }).status, "SUBMITTED");
@@ -110,6 +113,17 @@ test("core endpoints keep authorization, validation, and domain results", async 
     assert.equal(plan.deferrals[0]?.reason, "NO_CAPACITY");
     assert.equal(JSON.stringify(plan).includes("ortools"), false);
     assert.equal(world.tripRows.length, before);
+    const readPlan = await fetch(url(server, "/api/planning/2026-06-02"), { headers: { cookie: dispatcherCookie } });
+    assert.equal(readPlan.status, 200);
+    const storedPlan = (await readPlan.json()) as { trips: { id: string; status: string }[] };
+    assert.equal(storedPlan.trips.find((trip) => trip.id === plannedTrip)?.status, "PLANNED");
+    assert.equal((await fetch(url(server, "/api/deferrals"), { headers: { cookie: managerCookie } })).status, 403);
+    const deferrals = (await (await fetch(url(server, "/api/deferrals"), { headers: { cookie: dispatcherCookie } })).json()) as { reason: string }[];
+    assert.equal(deferrals.some((item) => item.reason === "NO_CAPACITY"), true);
+    const tripDetail = await fetch(url(server, `/api/trips/${plannedTrip}`), { headers: { cookie: dispatcherCookie } });
+    assert.equal(tripDetail.status, 200);
+    assert.equal(((await tripDetail.json()) as { status: string; depot: string }).depot, "Peliyagoda");
+    assert.equal((await fetch(url(server, "/api/exceptions"), { headers: { cookie: loaderCookie } })).status, 403);
     const missingCsrf = await fetch(url(server, "/api/planning/run"), {
       method: "POST",
       headers: { cookie: dispatcherCookie, "content-type": "application/json" },
@@ -157,9 +171,19 @@ test("core endpoints keep authorization, validation, and domain results", async 
     assert.equal(context.status, 400);
     const exception = await send(server, "/api/exceptions", dispatcherCookie, { category: "loading problem" });
     assert.equal(exception.status, 201);
+    const listed = (await (await fetch(url(server, "/api/exceptions"), { headers: { cookie: dispatcherCookie } })).json()) as { category: string }[];
+    assert.equal(listed.some((item) => item.category === "loading problem"), true);
+    assert.equal(JSON.stringify(listed).includes("orderId"), false);
     const confirmedTrip = await send(server, `/api/trips/${plannedTrip}/confirm`, dispatcherCookie, {});
     assert.equal(confirmedTrip.status, 200);
     assert.equal(((await confirmedTrip.json()) as { status: string }).status, "CONFIRMED");
+    const repeated = await send(server, `/api/trips/${plannedTrip}/confirm`, dispatcherCookie, {});
+    assert.equal(repeated.status, 409);
+    assert.equal(((await repeated.json()) as { error: { code: string } }).error.code, "INVALID_STATE_TRANSITION");
+    const reread = (await (await fetch(url(server, "/api/planning/2026-06-02"), { headers: { cookie: dispatcherCookie } })).json()) as { trips: { id: string; status: string }[] };
+    assert.equal(reread.trips.find((trip) => trip.id === plannedTrip)?.status, "CONFIRMED");
+    assert.equal(world.orderRows.find((item) => item.id === loadOrder)?.orderUnits, 10);
+    assert.equal(world.orderRows.find((item) => item.id === loadOrder)?.orderWeightKg, "12.5");
   } finally {
     await close(server);
   }
