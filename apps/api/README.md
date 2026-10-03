@@ -40,6 +40,8 @@ A Dispatcher persists a trip from an allocation through the trip domain. The tri
 
 A Loader verifies one loading record for a confirmed trip stop. Expected units are copied from `order_units`. The order moves through `Loading` to `Loaded` on the order transition, and a shortfall is stored on that same record. The order quantity, weight, volume, and outlet context stay unchanged. A second verification or a second shortfall report conflicts. No business audit action name is approved, so these writes do not invent one.
 
+A Driver records one delivery for a dispatched stop on the vehicle assigned to that driver. The outcome stays free text. The order moves to `Delivered` through the order transition. Proof of delivery stores an evidence reference on that delivery and does not confirm a receipt. The order quantity and outlet context stay unchanged. A second delivery for the same stop conflicts. No business audit action name is approved, so these writes do not invent one.
+
 ## Prisma
 
 Prisma CLI and Client `7.10.0` use PostgreSQL through `@prisma/adapter-pg`. The schema has no application models. No migration has been created. The first WayLoom migration belongs to Phase 2.
