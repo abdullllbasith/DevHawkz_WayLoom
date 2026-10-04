@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "WayLoom",
   description: "WayLoom frontend foundation",
+  icons: { icon: "/WayLoom.png" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

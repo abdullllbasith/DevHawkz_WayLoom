@@ -19,6 +19,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // WayLoom agent instructions live in the repository rules, not generated files.
   agentRules: false,
+  devIndicators: false,
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

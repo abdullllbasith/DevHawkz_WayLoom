@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { BrandLogo } from "./brand-logo";
 import {
   ROLE_OPTIONS,
   roleWorkspace,
@@ -87,16 +88,7 @@ export function LoginForm() {
       {/* Top Navbar */}
       <header className="login-navbar">
         <div className="login-brand">
-          <div className="login-logo-mark" aria-hidden="true">
-            <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
-              <polygon points="14,2 18,8 14,14 10,8" fill="#0F172A" />
-              <polygon points="26,14 20,18 14,14 20,10" fill="#0F172A" />
-              <polygon points="14,26 10,20 14,14 18,20" fill="#0F172A" />
-              <polygon points="2,14 8,10 14,14 8,18" fill="#0F172A" />
-              <circle cx="14" cy="14" r="2" fill="#2563EB" />
-            </svg>
-          </div>
-          <span className="login-brand-name">WayLoom</span>
+          <BrandLogo size="login" />
         </div>
 
         <div className="login-lang-picker">
@@ -126,91 +118,8 @@ export function LoginForm() {
             </p>
           </div>
 
-          <div className="login-illustration-container" aria-hidden="true">
-            <svg className="login-illustration-svg" viewBox="0 0 540 380" fill="none">
-              {/* Background gradient plane */}
-              <rect width="540" height="380" fill="#F8FAFC" />
-
-              {/* Isometric grid ground lines */}
-              <g stroke="#E2E8F0" strokeWidth="1.2">
-                <line x1="0" y1="180" x2="540" y2="380" />
-                <line x1="0" y1="260" x2="400" y2="400" />
-                <line x1="120" y1="120" x2="540" y2="280" />
-                <line x1="380" y1="40" x2="540" y2="100" />
-
-                {/* Cross lanes */}
-                <line x1="180" y1="380" x2="540" y2="200" />
-                <line x1="300" y1="380" x2="540" y2="260" />
-                <line x1="60" y1="380" x2="420" y2="200" />
-              </g>
-
-              {/* Warehouse Building */}
-              <g id="warehouse-building">
-                {/* Back Wall / Roof */}
-                <polygon points="20,180 160,110 320,190 180,260" fill="#EDF2F7" stroke="#CBD5E1" strokeWidth="1.5" />
-                {/* Left Wall */}
-                <polygon points="20,180 180,260 180,310 20,230" fill="#E2E8F0" stroke="#CBD5E1" strokeWidth="1.5" />
-                {/* Front Dock Wall */}
-                <polygon points="180,260 320,190 320,240 180,310" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="1.5" />
-
-                {/* Dock Doors (3) */}
-                {/* Bay 1 */}
-                <polygon points="195,280 230,262 230,225 195,243" fill="#1E293B" />
-                {/* Bay 2 */}
-                <polygon points="240,257 275,239 275,202 240,220" fill="#1E293B" />
-                {/* Bay 3 */}
-                <polygon points="285,234 315,219 315,182 285,197" fill="#1E293B" />
-              </g>
-
-              {/* Docked Delivery Trucks (3) */}
-              {/* Truck 1 at Bay 1 */}
-              <g id="truck-1" transform="translate(-10, 15)">
-                {/* Cargo Body */}
-                <polygon points="90,305 170,265 170,220 90,260" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.5" />
-                <polygon points="90,260 170,220 185,227 105,267" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1.5" />
-                {/* Cab */}
-                <polygon points="65,317 90,305 90,275 65,287" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="1.5" />
-                <polygon points="65,287 90,275 105,282 80,294" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1.5" />
-                {/* Windshield */}
-                <polygon points="67,294 77,289 87,294 77,299" fill="#0F172A" />
-                {/* Wheels */}
-                <ellipse cx="80" cy="324" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="140" cy="294" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="155" cy="286" rx="5" ry="3" fill="#0F172A" />
-              </g>
-
-              {/* Truck 2 at Bay 2 */}
-              <g id="truck-2" transform="translate(35, -10)">
-                {/* Cargo Body */}
-                <polygon points="90,305 170,265 170,220 90,260" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.5" />
-                <polygon points="90,260 170,220 185,227 105,267" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1.5" />
-                {/* Cab */}
-                <polygon points="65,317 90,305 90,275 65,287" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="1.5" />
-                <polygon points="65,287 90,275 105,282 80,294" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1.5" />
-                {/* Windshield */}
-                <polygon points="67,294 77,289 87,294 77,299" fill="#0F172A" />
-                {/* Wheels */}
-                <ellipse cx="80" cy="324" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="140" cy="294" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="155" cy="286" rx="5" ry="3" fill="#0F172A" />
-              </g>
-
-              {/* Truck 3 at Bay 3 */}
-              <g id="truck-3" transform="translate(80, -35)">
-                {/* Cargo Body */}
-                <polygon points="90,305 170,265 170,220 90,260" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.5" />
-                <polygon points="90,260 170,220 185,227 105,267" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1.5" />
-                {/* Cab */}
-                <polygon points="65,317 90,305 90,275 65,287" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="1.5" />
-                <polygon points="65,287 90,275 105,282 80,294" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1.5" />
-                {/* Windshield */}
-                <polygon points="67,294 77,289 87,294 77,299" fill="#0F172A" />
-                {/* Wheels */}
-                <ellipse cx="80" cy="324" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="140" cy="294" rx="5" ry="3" fill="#0F172A" />
-                <ellipse cx="155" cy="286" rx="5" ry="3" fill="#0F172A" />
-              </g>
-            </svg>
+          <div className="login-illustration-container">
+            <img className="login-illustration-svg" src="/login-dock.png" alt="Delivery trucks at a warehouse dock" />
           </div>
         </section>
 
