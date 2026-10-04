@@ -40,6 +40,7 @@ import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
 import type { PlanningContextLoadResult } from "../domain/planning-context.js";
 import { executePlanningRun } from "../domain/planning-run.js";
+import { emitDiagnostic, planningDiagnostic, syncDiagnostic } from "../observability/diagnostics.js";
 import { applySyncBatch, parseSyncBatchBody, readSyncStatus, type SyncBatchStore } from "../domain/sync-batch.js";
 import { confirmTrip, dispatchTrip } from "../domain/trip.js";
 import type { StoredTrip, TripStore } from "../domain/trip.js";
@@ -281,6 +282,7 @@ async function runPlanning(
     sendDomainFailure(response, "invalid_input");
     return;
   }
+  const startedAt = new Date().toISOString();
   const planningContext = await deps.loadPlanningRunContext(parsed.value.operationalDate);
   const executed = await executePlanningRun({
     actor: actor(context),
@@ -289,11 +291,36 @@ async function runPlanning(
     trips: deps.trips,
     deferrals: deps.deferrals,
   });
+  try {
+    const trips = executed.ok ? await deps.listTripsOnDate(parsed.value.operationalDate) : [];
+    const deferrals = executed.ok ? await deps.listDeferrals({ orderDate: parsed.value.operationalDate }) : [];
+    emitDiagnostic(planningDiagnostic({
+      operationalDate: parsed.value.operationalDate,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      outcome: executed.ok ? "success" : planningOutcome(executed.code),
+      eligible: planningContext.ok ? planningContext.input.orders.length : 0,
+      allocated: trips.reduce((sum, trip) => sum + trip.stops.length, 0),
+      deferred: deferrals.length,
+    }));
+  } catch {
+    // Diagnostics must not change the planning result.
+  }
   if (!executed.ok) {
     sendDomainFailure(response, executed.code);
     return;
   }
   sendJson(response, 200, await planningResult(deps, parsed.value.operationalDate));
+}
+
+function planningOutcome(code: string): "validation_failure" | "service_failure" | "rejected" {
+  if (code === "planning_validation_failure") {
+    return "validation_failure";
+  }
+  if (code === "planning_service_failure") {
+    return "service_failure";
+  }
+  return "rejected";
 }
 
 async function readPlanning(deps: CoreDependencies, response: ServerResponse, request: IncomingMessage): Promise<void> {
@@ -557,6 +584,7 @@ async function syncBatchRoute(
     now: deps.now(),
     store: deps.sync,
   });
+  emitDiagnostic(syncDiagnostic(results));
   sendJson(response, 200, { results });
 }
 
