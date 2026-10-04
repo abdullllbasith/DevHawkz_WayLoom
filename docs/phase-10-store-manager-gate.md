@@ -1,6 +1,8 @@
 # TASK-10-07 — Store Manager Gate
 
-**Phase 10 Store Manager Gate Result:** BLOCKED
+**Phase 10 Store Manager Gate Result:** PASS
+
+**Phase 10 is CLOSED.** Tasks 10-01 through 10-07 are PASS. The earlier BLOCKED conclusion in this file is replaced by this record.
 
 **Final task status:**
 
@@ -10,21 +12,32 @@
 | TASK-10-02 Store Dashboard | PASS | `f9fb5d8` |
 | TASK-10-03 Create Order | PASS | `4901849` |
 | TASK-10-04 Order Confirmation and Tracking | PASS | `1f0aa81` |
-| TASK-10-05 Receipt Confirmation | BLOCKED | `2df4c1a` |
-| TASK-10-06 Store Manager Review | BLOCKED | `4587879` |
-| TASK-10-07 Store Manager Gate | BLOCKED | this record |
+| TASK-10-05 Receipt Confirmation | PASS | `2df4c1a`, dispatch `e6eda29`, driver seed `cb62d71` |
+| TASK-10-06 Store Manager Review | PASS | `4587879`. A receiving issue stays on the receipt. |
+| TASK-10-07 Store Manager Gate | PASS | this record |
 
-**Runtime recheck:** PASS on 2026-10-04 at HEAD `6d32e35`, API `http://127.0.0.1:4000`, database `wayloom_test`.
+**Receipt end to end:** PASS on 2026-10-04 at baseline `cb62d71`, API `http://127.0.0.1:4000`, database `wayloom_test`.
 
-- The competition seed left the existing users, driver assignment, and `OUT001` outlet assignment unchanged.
+- `SEED-2026-06-02-OUT001` was Planned / Allocated on confirmed trip `0e18a809-55ee-413f-b5ba-2b1d9d2267ea`, vehicle `VEH035`.
+- Loader verification returned 201.
+- Dispatcher `POST /api/trips/:id/dispatch` returned 200. The order became `DISPATCHED`. The trip stayed `CONFIRMED`.
+- `seed.driver` saw that trip.
+- Delivery outcome returned 201. Proof of delivery returned 201. The order became `DELIVERED`.
+- Store Manager `POST /api/orders/:id/receipt` returned 201 with result `accepted`.
+- Final order state: `RECEIPT_CONFIRMED`.
+
+**10-06 receipt issue contract:** PASS. The Hackathon Technical Blueprint v1.4 and TASK-04-09 / TASK-04-10 require the Store Manager to confirm receipt and optionally report a receiving issue on that receipt. `POST /api/exceptions` stays Dispatcher-only. No Store Manager exception permission was added.
+
+**Earlier runtime recheck:** PASS on 2026-10-04 at HEAD `6d32e35`.
+
 - `seed.store-manager` authenticated.
 - `GET /api/orders` returned `SEED-2026-06-02-OUT001` for `OUT001` as `PLANNED_ALLOCATED`.
 - A new order for `OUT001` was created as `DRAFT` and submitted as `SUBMITTED`.
 - Create for `OUT002` returned `403 FORBIDDEN`.
-- The seeded order remained one `Planned / Allocated` row with its original units and `submitted_at`.
-- API tests: 141 passed.
+- The seeded order remained one row with its original units and `submitted_at`.
+- API tests at that recheck: 141 passed.
 
-The earlier gate failure, an empty `user_outlets` list, was closed by `c8e3b79` and `6d32e35`. Those commits add only the `OUT001` assignment and let a rerun leave an already progressed seed order unchanged. They do not change authorization or lifecycle rules.
+The empty `user_outlets` failure was closed by `c8e3b79` and `6d32e35`. Those commits add only the `OUT001` assignment and let a rerun leave an already progressed seed order unchanged.
 
 | Criterion | Result |
 |---|---|
@@ -35,22 +48,20 @@ The earlier gate failure, an empty `user_outlets` list, was closed by `c8e3b79` 
 | Tracking reflects authoritative state | PASS |
 | Other-outlet create rejected | PASS |
 | Existing seeded order preserved | PASS |
-| Receipt confirmation end to end | BLOCKED |
-| Exception issue reporting | BLOCKED |
+| Receipt confirmation end to end | PASS |
+| Receipt issue reporting | PASS |
 | No new issue permission, schema, endpoint, or lifecycle | PASS |
 | Server-side authorization | PASS |
 | No fake operational data | PASS |
 | No unsupported workflow | PASS |
 
-**E2E Result:** BLOCKED
+**E2E Result:** PASS
 
-**Accepted blockers:**
+**Approved follow-up commits:**
 
-1. TASK-10-05 cannot confirm a receipt. Receipt confirmation requires a `DELIVERED` order. The approved routes do not perform `LOADED → DISPATCHED`. The domain edge exists with owner `DISPATCHER` and is not exposed as an operation. Driver delivery also remains outside this phase.
-2. TASK-10-06 and TASK-10-07 cannot pass issue reporting. `POST /api/exceptions` and `recordException` allow the dispatcher only. Store Manager receipt details stay on `POST /api/orders/:id/receipt`.
+- `e6eda29` exposes the existing Dispatcher edge `LOADED → DISPATCHED` as an explicit trip dispatch. It does not add a trip status or change the driver delivery precondition.
+- `cb62d71` assigns `seed.driver` to `VEH035` and keeps the existing `VEH001` assignment. It does not change the planner, vehicle import, or driver authorization.
 
-**Workaround check:** Phase 10 did not add a dispatch route, a driver assignment, a Store Manager exception permission, or a lifecycle change. Files after the Phase 9 gate are the Store Manager web shell, order/receipt proxies, the seed assignment, and these gate notes.
+**Workaround check:** Phase 10 did not add a Store Manager exception permission, a new lifecycle edge, or a planner change.
 
-**Phase 11 Handoff:** Not Approved
-
-**Next step:** Do not start Phase 11. The next decision is an approved operation for `LOADED → DISPATCHED`. Exception reporting for Store Manager stays a separate authorization decision and is not a reason to add that operation.
+**Remaining Phase 10 blockers:** none.
