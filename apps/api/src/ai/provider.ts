@@ -1,5 +1,6 @@
 import type { AiInput } from "./input.js";
 import { AI_CONTRACT_VERSION, aiInputUse } from "./input.js";
+import { createOpenRouterProvider } from "./openrouter.js";
 import type { AiAdvisory } from "./output.js";
 import { parseAiOutput } from "./output.js";
 
@@ -16,7 +17,7 @@ export type AiProvider = {
 
 export type AiSettings = {
   enabled: boolean;
-  providerId: "disabled" | "deterministic";
+  providerId: "disabled" | "deterministic" | "openrouter";
   timeoutMs: number;
   maxResponseChars: number;
   providerKey: string | null;
@@ -35,7 +36,7 @@ export function loadAiSettings(env: Record<string, string | undefined>): AiSetti
   const maxResponseChars = boundedInteger(env.AI_MAX_RESPONSE_CHARS, 4000, 200, 20_000);
   return {
     enabled: env.AI_ENABLED === "true",
-    providerId: env.AI_PROVIDER === "deterministic" ? "deterministic" : "disabled",
+    providerId: configuredProviderId(env.AI_PROVIDER),
     timeoutMs,
     maxResponseChars,
     providerKey: env.AI_PROVIDER_API_KEY ?? null,
@@ -54,6 +55,9 @@ export function publicAiSettings(settings: AiSettings): PublicAiSettings {
 export function selectAiProvider(settings: AiSettings): AiProvider {
   if (!settings.enabled || settings.providerId === "disabled") {
     return disabledProvider;
+  }
+  if (settings.providerId === "openrouter") {
+    return createOpenRouterProvider(settings);
   }
   return deterministicProvider;
 }
@@ -153,6 +157,13 @@ function timeout(timeoutMs: number, signal: AbortSignal): Promise<"timeout"> {
       resolve("timeout");
     });
   });
+}
+
+function configuredProviderId(value: string | undefined): AiSettings["providerId"] {
+  if (value === "deterministic" || value === "openrouter") {
+    return value;
+  }
+  return "disabled";
 }
 
 function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {

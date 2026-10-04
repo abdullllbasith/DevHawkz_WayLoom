@@ -25,8 +25,10 @@ The API fails to start when one of its required values is missing or invalid. Th
 | `WEB_HTTPS` | `true` sends HSTS. Omitted means HSTS is not sent. `true` is rejected outside production. |
 | `API_ORIGIN` | HTTPS API origin added to the frontend `connect-src`. Omitted means the page origin only. |
 | `AI_ENABLED` | Must be the string `true` to enable decision support. Any other value leaves it off. |
-| `AI_PROVIDER` | `deterministic` is the only enabled provider. Anything else stays disabled. |
-| `AI_PROVIDER_API_KEY` | Server only. It is not returned to the browser and must not be committed. |
+| `AI_PROVIDER` | `deterministic` restates approved facts on the server. `openrouter` calls OpenRouter with model `google/gemini-2.5-flash-lite`. Any other value stays disabled. There is no `AI_MODEL` variable. |
+| `AI_PROVIDER_API_KEY` | Server only. Required by `openrouter`. It is not returned to the browser, read by the web app, or committed. |
+| `AI_TIMEOUT_MS` | Optional integer from 100 to 10000. Omitted means 2000. Bounds the provider request. |
+| `AI_MAX_RESPONSE_CHARS` | Optional integer from 200 to 20000. Omitted means 4000. Bounds the model text and the validated advisory. |
 
 `PLANNING_SERVICE_URL` is not required. No service-to-service planning URL is approved. The API runs `@wayloom/planning` in process.
 
