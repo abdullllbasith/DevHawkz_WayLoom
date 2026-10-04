@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { aiFallbackMessage } from "../../../lib/ai-fallback";
 import { confirmPlanOnServer } from "../../../lib/dispatcher-confirmation";
-import { latestOrderDate, readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { filterTrips, planningCounts, readPlanningExplanation, readPlanningResult, type PlanTrip, type PlanningView } from "../../../lib/dispatcher-planning";
 
 const emptyView: PlanningView = { operationalDate: null, trips: [], deferrals: [] };
@@ -21,6 +22,7 @@ export default function DispatcherPlanningPage() {
   const [busy, setBusy] = useState<"run" | "confirm" | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [explainBusy, setExplainBusy] = useState(false);
+  const operationalDate = useOperationalDate();
 
   async function load() {
     const ordersResponse = await fetch("/api/orders", { cache: "no-store" });
@@ -32,19 +34,25 @@ export default function DispatcherPlanningPage() {
       return;
     }
     const loadedOrders = readOrderList(ordersPayload);
-    const date = latestOrderDate(loadedOrders);
+    const date = operationalDate.selected;
     let next = emptyView;
     if (date !== null) {
       const planningResponse = await fetch(`/api/planning/${encodeURIComponent(date)}`, { cache: "no-store" });
       const planningPayload: unknown = await planningResponse.json().catch(() => null);
       next = planningResponse.ok ? readPlanningResult(planningPayload) : { ...emptyView, operationalDate: date };
       if (!planningResponse.ok) setError("The planning result could not be loaded.");
+      else setError(null);
+    } else if (operationalDate.status === "empty") {
+      setError(noOperationalDateMessage);
+    } else {
+      setError(selectOperationalDateMessage);
     }
     setOrders(loadedOrders);
     setView(next.operationalDate === null && date !== null ? { ...next, operationalDate: date } : next);
   }
 
   useEffect(() => {
+    if (operationalDate.status === "loading") return;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError("Planning data could not be loaded.");
@@ -52,7 +60,7 @@ export default function DispatcherPlanningPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [operationalDate.selected, operationalDate.status]);
 
   const counts = planningCounts(view);
   const trips = filterTrips(view.trips, query);

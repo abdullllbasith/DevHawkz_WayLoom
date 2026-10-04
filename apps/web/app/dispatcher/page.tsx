@@ -9,7 +9,6 @@ import {
   dashboardAlerts,
   dashboardKpis,
   filterOrders,
-  planningDateFromOrders,
   planningSummary,
   readOrders,
   readPlanning,
@@ -18,6 +17,7 @@ import {
   type DashboardTrip,
   type OrderCategoryTab,
 } from "../../lib/dispatcher-dashboard";
+import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "./operational-date";
 
 export default function DispatcherDashboardPage() {
   const router = useRouter();
@@ -27,7 +27,8 @@ export default function DispatcherDashboardPage() {
   const [trips, setTrips] = useState<DashboardTrip[]>([]);
   const [deferralCount, setDeferralCount] = useState(0);
   const [exceptionCount, setExceptionCount] = useState(0);
-  const [planningDate, setPlanningDate] = useState<string | null>(null);
+  const operationalDate = useOperationalDate();
+  const planningDate = operationalDate.selected;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [planningError, setPlanningError] = useState<string | null>(null);
   const [runningPlan, setRunningPlan] = useState(false);
@@ -42,7 +43,7 @@ export default function DispatcherDashboardPage() {
           throw new Error("Orders could not be loaded.");
         }
         const read = readOrders(ordersPayload);
-        const date = planningDateFromOrders(read.dates);
+        const date = operationalDate.selected;
         const [planningResult, exceptionsResult] = await Promise.all([
           date === null
             ? Promise.resolve({ trips: [] as DashboardTrip[], deferralCount: 0, operationalDate: null, failed: false })
@@ -61,8 +62,15 @@ export default function DispatcherDashboardPage() {
         setTrips(planningResult.trips);
         setDeferralCount(planningResult.deferralCount);
         setExceptionCount(exceptionsResult);
-        setPlanningDate(planningResult.operationalDate ?? date);
-        setLoadError(planningResult.failed ? "Planning result could not be loaded for this order date." : null);
+        setLoadError(
+          operationalDate.status === "empty"
+            ? noOperationalDateMessage
+            : date === null
+              ? selectOperationalDateMessage
+              : planningResult.failed
+                ? "Planning result could not be loaded for this operational date."
+                : null,
+        );
       } catch {
         if (!cancelled) {
           setOrders([]);
@@ -73,11 +81,20 @@ export default function DispatcherDashboardPage() {
         }
       }
     }
+    if (operationalDate.status === "loading") return () => {
+      cancelled = true;
+    };
+    if (operationalDate.status === "error") {
+      setLoadError("Dashboard data could not be loaded. No substitute figures are shown.");
+      return () => {
+        cancelled = true;
+      };
+    }
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [operationalDate.selected, operationalDate.status]);
 
   const categoryCounts = countOrdersByCategory(orders);
   const visibleOrders = filterOrders(orders, activeTab, searchQuery);

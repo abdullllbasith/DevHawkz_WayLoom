@@ -67,12 +67,6 @@ type PlanningRecord = {
   deferrals?: unknown;
 };
 
-export function planningDateFromOrders(orders: readonly { orderDate: string }[]): string | null {
-  const dates = orders.map((order) => order.orderDate).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date));
-  if (dates.length === 0) return null;
-  return [...dates].sort().at(-1) ?? null;
-}
-
 export function toDashboardOrder(value: OrderRecord): DashboardOrder | null {
   if (typeof value.id !== "string" || typeof value.deliveryId !== "string") return null;
   const units = typeof value.orderUnits === "number" ? value.orderUnits : Number(value.orderUnits);

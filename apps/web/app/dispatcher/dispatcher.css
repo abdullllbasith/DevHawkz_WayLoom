@@ -271,6 +271,18 @@ html:has(.dispatcher-shell) body {
   background: #f8fafc;
 }
 
+.dispatcher-date-btn select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dispatcher-date-btn select:disabled {
+  cursor: not-allowed;
+}
+
 .dispatcher-icon-btn {
   display: flex;
   align-items: center;

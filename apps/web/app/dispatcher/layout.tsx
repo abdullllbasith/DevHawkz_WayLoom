@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { resolveApiOrigin } from "../../lib/content-security-policy";
 import { dispatcherAccess, parseDispatcherIdentity, sessionRole } from "../../lib/dispatcher-shell";
 import { DispatcherFrame } from "./frame";
+import { OperationalDateProvider } from "./operational-date";
 import "./dispatcher.css";
 
 export default async function DispatcherLayout({ children }: { children: ReactNode }) {
@@ -35,8 +36,10 @@ export default async function DispatcherLayout({ children }: { children: ReactNo
     );
   }
   return (
-    <DispatcherFrame apiOrigin={origin} displayName={identity.displayName}>
-      {children}
-    </DispatcherFrame>
+    <OperationalDateProvider>
+      <DispatcherFrame apiOrigin={origin} displayName={identity.displayName}>
+        {children}
+      </DispatcherFrame>
+    </OperationalDateProvider>
   );
 }

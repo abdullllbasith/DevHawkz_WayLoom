@@ -6,7 +6,6 @@ import {
   dashboardAlerts,
   dashboardKpis,
   filterOrders,
-  planningDateFromOrders,
   planningSummary,
   readOrders,
   readPlanning,
@@ -52,9 +51,7 @@ test("dashboard values come from order, planning, and exception counts", () => {
   assert.equal(planningSummary({ trips: [], deferralCount: 0 }).estimatedOnTime, "—");
 });
 
-test("planning date follows the latest order date and readers ignore malformed payloads", () => {
-  assert.equal(planningDateFromOrders([{ orderDate: "2026-06-01" }, { orderDate: "2026-06-02" }]), "2026-06-02");
-  assert.equal(planningDateFromOrders([]), null);
+test("dashboard readers ignore malformed payloads", () => {
   const read = readOrders([
     { id: "1", deliveryId: "D1", orderDate: "2026-06-02", outletCode: "OUT001", brand: "Fresh", status: "SUBMITTED", orderUnits: 3, orderWeightKg: "1.5" },
     { id: 4 },

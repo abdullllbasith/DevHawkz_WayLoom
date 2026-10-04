@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { latestOrderDate, readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanningView } from "../../../lib/dispatcher-planning";
 import {
   displayRouteId,
@@ -22,6 +23,7 @@ export default function DispatcherRoutesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const operationalDate = useOperationalDate();
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +41,7 @@ export default function DispatcherRoutesPage() {
         }
 
         const loadedOrders = readOrderList(ordersPayload);
-        const date = latestOrderDate(loadedOrders);
+        const date = operationalDate.selected;
         let planning: PlanningView = { operationalDate: date, trips: [], deferrals: [] };
 
         if (date !== null) {
@@ -47,9 +49,14 @@ export default function DispatcherRoutesPage() {
           const payload: unknown = await planningResponse.json().catch(() => null);
           if (planningResponse.ok) {
             planning = readPlanningResult(payload);
-          } else {
-            if (!cancelled) setError("Planning result could not be loaded for the current operational date.");
+            if (!cancelled) setError(null);
+          } else if (!cancelled) {
+            setError("Planning result could not be loaded for the current operational date.");
           }
+        } else if (!cancelled && operationalDate.status === "empty") {
+          setError(noOperationalDateMessage);
+        } else if (!cancelled) {
+          setError(selectOperationalDateMessage);
         }
 
         if (!cancelled) {
@@ -67,11 +74,14 @@ export default function DispatcherRoutesPage() {
         }
       }
     }
+    if (operationalDate.status === "loading") return () => {
+      cancelled = true;
+    };
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [operationalDate.selected, operationalDate.status]);
 
   const trips = view.trips;
   const kpis = routesKpis(trips);

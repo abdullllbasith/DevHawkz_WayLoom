@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { confirmationCards, unavailableApproval } from "../../../lib/dispatcher-confirmation";
-import { readOrderList, latestOrderDate, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { noOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanningView } from "../../../lib/dispatcher-planning";
 
 export function ApprovedPlanView() {
@@ -13,6 +14,7 @@ export function ApprovedPlanView() {
   const [view, setView] = useState<PlanningView>({ operationalDate: null, trips: [], deferrals: [] });
   const [orders, setOrders] = useState<DispatcherOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const operationalDate = useOperationalDate();
 
   useEffect(() => {
     let cancelled = false;
@@ -29,7 +31,7 @@ export function ApprovedPlanView() {
           return;
         }
         const loaded = readOrderList(ordersPayload);
-        const date = latestOrderDate(loaded);
+        const date = operationalDate.selected;
         let planning: PlanningView = { operationalDate: date, trips: [], deferrals: [] };
         if (date !== null) {
           const planningResponse = await fetch(`/api/planning/${encodeURIComponent(date)}`, { cache: "no-store" });
@@ -40,16 +42,20 @@ export function ApprovedPlanView() {
         if (!cancelled) {
           setOrders(loaded);
           setView(planning);
+          if (date === null && operationalDate.status === "empty") setError(noOperationalDateMessage);
         }
       } catch {
         if (!cancelled) setError("Confirmation data could not be loaded.");
       }
     }
+    if (operationalDate.status === "loading") return () => {
+      cancelled = true;
+    };
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [operationalDate.selected, operationalDate.status]);
 
   const confirmed = view.trips.filter((trip) => trip.status === "CONFIRMED");
   const scheduledStops = view.trips.flatMap((trip) => trip.stops.map((stop) => ({ trip, stop })));

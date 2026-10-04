@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { activeDispatcherHref, dispatcherNavigation } from "../../lib/dispatcher-shell";
 import { DispatcherLogout } from "./logout";
+import { useOperationalDate } from "./operational-date";
 
 export function DispatcherFrame({
   apiOrigin,
@@ -18,6 +19,7 @@ export function DispatcherFrame({
 }) {
   const pathname = usePathname();
   const active = activeDispatcherHref(pathname);
+  const operationalDate = useOperationalDate();
 
   const isOrdersPage = pathname.startsWith("/dispatcher/orders");
   const isPlanningPage = pathname.startsWith("/dispatcher/planning");
@@ -31,7 +33,7 @@ export function DispatcherFrame({
   let breadcrumb = "Dashboard";
   let title = "Good evening, Dispatcher";
   let subtitle = "Operational overview";
-  let dateText = "Planning date from orders";
+  let dateText = "Operational date";
 
   if (isAllocationConfirmationPage) {
     breadcrumb = "Dispatcher > AI Planning > AI Planning Results > Approved";
@@ -155,15 +157,26 @@ export function DispatcherFrame({
               />
             </div>
 
-            <button type="button" className="dispatcher-date-btn" aria-label={dateText} disabled>
+            <label className="dispatcher-date-btn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span>{dateText}</span>
-            </button>
+              <select
+                aria-label={dateText}
+                value={operationalDate.selected ?? ""}
+                disabled={operationalDate.dates.length === 0}
+                onChange={(event) => operationalDate.setSelected(event.target.value)}
+              >
+                {operationalDate.dates.length === 0 ? <option value="">No operational date</option> : null}
+                {operationalDate.selected === null && operationalDate.dates.length > 0 ? <option value="">Select operational date</option> : null}
+                {operationalDate.dates.map((date) => (
+                  <option key={date} value={date}>{date}</option>
+                ))}
+              </select>
+            </label>
 
             <button type="button" className="dispatcher-icon-btn" aria-label="Notifications">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

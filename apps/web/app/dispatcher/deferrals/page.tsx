@@ -15,6 +15,7 @@ import {
   type EnrichedDeferral,
 } from "../../../lib/dispatcher-deferrals";
 import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanDeferral } from "../../../lib/dispatcher-planning";
 
 export default function DispatcherDeferralsPage() {
@@ -26,6 +27,7 @@ export default function DispatcherDeferralsPage() {
   const [operationalDate, setOperationalDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const planningDate = useOperationalDate();
 
   // Filters
   const [search, setSearch] = useState("");
@@ -68,9 +70,7 @@ export default function DispatcherDeferralsPage() {
         const parsedOrders = readOrderList(ordersPayload);
         const storedDeferrals = readDeferralList(deferralsPayload);
 
-        // Derive latest operational date from orders
-        const dates = parsedOrders.map((o) => o.orderDate).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
-        const derivedDate = dates.length > 0 ? [...dates].sort().at(-1) ?? null : null;
+        const derivedDate = planningDate.selected;
 
         // Also fetch planning results if operational date exists to capture all planned deferrals
         let planDeferrals: PlanDeferral[] = [];
@@ -115,11 +115,14 @@ export default function DispatcherDeferralsPage() {
       }
     }
 
+    if (planningDate.status === "loading") return () => {
+      cancelled = true;
+    };
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [planningDate.selected, planningDate.status]);
 
   const filteredDeferrals = filterDeferralsList(deferrals, {
     search,

@@ -9,13 +9,13 @@ import {
   countOrdersTabs,
   exportOrdersCsv,
   filterOrdersList,
-  latestOrderDate,
   orderKpis,
   readOrderList,
   recentOrders,
   type DispatcherOrder,
   type OrderCategoryTab,
 } from "../../../lib/dispatcher-orders";
+import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 
 type DeferralRow = { id: string; orderId: string; reason: string };
 
@@ -32,6 +32,7 @@ export default function DispatcherOrdersPage() {
   const [running, setRunning] = useState(false);
   const [closingOrderId, setClosingOrderId] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const operationalDate = useOperationalDate();
 
   async function fetchCsrfToken(): Promise<string> {
     try {
@@ -125,7 +126,7 @@ export default function DispatcherOrdersPage() {
   const orderById = new Map(orders.map((order) => [order.id, order]));
 
   async function runPlanning() {
-    const date = latestOrderDate(orders);
+    const date = operationalDate.selected;
     if (date === null || running) return;
     setRunning(true);
     try {
@@ -169,6 +170,8 @@ export default function DispatcherOrdersPage() {
   return (
     <div className="orders-page-container">
       {error && <div className="dashboard-error" role="alert">{error}</div>}
+      {operationalDate.status === "empty" ? <div className="dashboard-error" role="status">{noOperationalDateMessage}</div> : null}
+      {operationalDate.status === "ready" && operationalDate.selected === null ? <div className="dashboard-error" role="status">{selectOperationalDateMessage}</div> : null}
       {actionFeedback && <div className="dashboard-feedback" role="status">{actionFeedback}</div>}
       <section className="orders-kpi-grid" aria-label="Orders KPI Summary">
         {kpis.map((kpi) => (
@@ -293,7 +296,7 @@ export default function DispatcherOrdersPage() {
             <h2 className="selected-orders-title">Selected Orders</h2>
             <div className="selected-orders-count">—</div>
             <div className="selected-orders-subtitle">Planning does not accept a selected subset</div>
-            <button type="button" className="ai-generate-btn" onClick={() => void runPlanning()} disabled={latestOrderDate(orders) === null || running}>
+            <button type="button" className="ai-generate-btn" onClick={() => void runPlanning()} disabled={operationalDate.selected === null || running}>
               {running ? "Running planning..." : "Run planning"}
             </button>
           </div>

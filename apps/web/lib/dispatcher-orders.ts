@@ -119,11 +119,6 @@ export function exportOrdersCsv(orders: readonly DispatcherOrder[]): string {
   return [header, ...rows].join("\n");
 }
 
-export function latestOrderDate(orders: readonly DispatcherOrder[]): string | null {
-  const dates = orders.map((order) => order.orderDate).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date));
-  return [...dates].sort().at(-1) ?? null;
-}
-
 export type ConfirmOrderApiResult =
   | { ok: true; order: DispatcherOrder }
   | { ok: false; code: string; message: string };
