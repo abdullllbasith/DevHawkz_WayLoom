@@ -37,7 +37,7 @@ export default async function LoaderLayout({ children }: { children: ReactNode }
     );
   }
   return (
-    <LoaderFrame apiOrigin={origin} displayName={identity.displayName}>
+    <LoaderFrame displayName={identity.displayName}>
       {children}
     </LoaderFrame>
   );

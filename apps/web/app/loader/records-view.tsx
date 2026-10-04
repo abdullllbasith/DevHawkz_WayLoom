@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { StatusBanner } from "../status-banner";
 import { WAYLOOM_CSRF_HEADER } from "../../lib/api-client";
+import { humanActionError, loaderVerifiedMessage } from "../../lib/status-copy";
+import { displayRouteLabel, shortId } from "../../lib/short-id";
 
 export type LoadingTask = {
   id: string;
@@ -54,12 +57,16 @@ export function LoaderRecords({ view }: { view: View }) {
   const [shortfallUnits, setShortfallUnits] = useState("");
   const [details, setDetails] = useState("");
   const [pending, setPending] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   async function load() {
     const [stopResponse, taskResponse] = await Promise.all([
       fetch("/api/loading/stops", { cache: "no-store" }),
       fetch("/api/loading/tasks", { cache: "no-store" }),
     ]);
+    if (stopResponse.status === 401 || stopResponse.status === 403 || taskResponse.status === 401 || taskResponse.status === 403) {
+      throw new Error("denied");
+    }
     if (!stopResponse.ok || !taskResponse.ok) throw new Error("unavailable");
     const parsedStops = readStops(await stopResponse.json());
     const parsedTasks = readTasks(await taskResponse.json());
@@ -72,13 +79,17 @@ export function LoaderRecords({ view }: { view: View }) {
   useEffect(() => {
     let cancelled = false;
     load()
-      .catch(() => {
-        if (!cancelled) setError("Loading work could not be read. This is not an empty assignment.");
+      .catch((reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error && reason.message === "denied"
+            ? "This Loader cannot read this loading work."
+            : "Loading work could not be read. This is not an empty assignment.");
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const stopRows = stops ?? [];
   const records = tasks ?? [];
@@ -98,15 +109,16 @@ export function LoaderRecords({ view }: { view: View }) {
     setMessage(null);
     try {
       const response = await postLoading(`/api/loading/${encodeURIComponent(selectedStop.tripStopId)}/verify`, { loadedUnits: units });
+      const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage("The server did not record the verification. The stop is unchanged.");
+        setMessage(humanActionError(response.status, payload, "verify"));
         return;
       }
       setLoadedUnits("");
-      setMessage("The loaded quantity was recorded.");
+      setMessage(loaderVerifiedMessage);
       await load();
     } catch {
-      setMessage("The server did not record the verification. The stop is unchanged.");
+      setMessage(humanActionError(0, null, "verify"));
     } finally {
       setPending(false);
     }
@@ -126,8 +138,9 @@ export function LoaderRecords({ view }: { view: View }) {
         shortfallUnits: units,
         ...(details.trim().length > 0 ? { details: details.trim() } : {}),
       });
+      const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage("The server did not record the shortfall. The loading record is unchanged.");
+        setMessage(humanActionError(response.status, payload, "shortfall"));
         return;
       }
       setShortfallUnits("");
@@ -135,7 +148,7 @@ export function LoaderRecords({ view }: { view: View }) {
       setMessage("The shortfall was recorded.");
       await load();
     } catch {
-      setMessage("The server did not record the shortfall. The loading record is unchanged.");
+      setMessage(humanActionError(0, null, "shortfall"));
     } finally {
       setPending(false);
     }
@@ -143,8 +156,40 @@ export function LoaderRecords({ view }: { view: View }) {
 
   return (
     <div className="orders-page-container">
-      {error && <div className="dashboard-error" role="alert">{error}</div>}
-      {message && <div className="dashboard-feedback" role="status">{message}</div>}
+      {error && (
+        <StatusBanner
+          tone={error.startsWith("This Loader") ? "denied" : "error"}
+          title={error.startsWith("This Loader") ? "Loading work is not available" : "Loading work is unavailable"}
+          body={error}
+          action={<button type="button" className="btn-primary loader-touch" onClick={() => { setError(null); setStops(null); setTasks(null); setReloadKey((value) => value + 1); }}>Retry</button>}
+        />
+      )}
+      {message && <StatusBanner tone={message === loaderVerifiedMessage || message === "The shortfall was recorded." ? "success" : "info"} title={message === loaderVerifiedMessage ? "Verification recorded" : "Loading update"} body={message} />}
+      {stops === null && error === null ? <StatusBanner tone="loading" title="Reading loading work" body="Counts stay hidden until the server responds." /> : null}
+      {stops !== null && view === "dashboard" ? (
+        <StatusBanner
+          tone={stopRows.length === 0 ? "empty" : "info"}
+          title={stopRows.length === 0 ? "Nothing is waiting" : "Waiting work"}
+          body={stopRows.length === 0 ? "Confirmed allocated stops appear on Loading." : "Open Loading to verify the next stop."}
+        />
+      ) : null}
+      {stops !== null && view === "loading" && stopRows.length === 0 ? (
+        <StatusBanner tone="empty" title="No confirmed stop is waiting for loading" body="A stop appears here after the Dispatcher confirms a plan and before this Loader verifies it." />
+      ) : null}
+      {stops !== null && view === "checklist" ? (
+        <StatusBanner
+          tone={records.length === 0 ? "empty" : "info"}
+          title={records.length === 0 ? "No loading record has been verified for this account" : "Expected versus loaded"}
+          body={records.length === 0 ? "Checklist rows appear after verification." : "These quantities come from records this Loader verified."}
+        />
+      ) : null}
+      {stops !== null && view === "records" ? (
+        <StatusBanner
+          tone={records.length === 0 ? "empty" : "info"}
+          title={records.length === 0 ? "No loading records yet" : "Verified records"}
+          body={records.length === 0 ? "A record is created when verification succeeds." : "Select a record to report a shortfall if one is still open."}
+        />
+      ) : null}
       <section className="loader-kpi-grid" aria-label="Loading work summary">
         <Kpi label="Stops to load" value={stops === null ? "—" : String(stopRows.length)} note="Confirmed and not yet verified" />
         <Kpi label="Expected units" value={stops === null ? "—" : String(expected)} note="Order units on those stops" />
@@ -224,7 +269,7 @@ function StopPanel({ stops, selectedId, onSelect }: { stops: EligibleStop[]; sel
                     </button>
                     <div className="kpi-subtitle">{stop.district}</div>
                   </td>
-                  <td>{stop.vehicleId}</td>
+                  <td>{stop.vehicleType}<div className="kpi-subtitle" title={stop.vehicleId}>{shortId(stop.vehicleId)}</div></td>
                   <td>{stop.expectedUnits}</td>
                   <td>{stop.tempRequirement}</td>
                 </tr>
@@ -237,12 +282,12 @@ function StopPanel({ stops, selectedId, onSelect }: { stops: EligibleStop[]; sel
         <h2 className="insights-card-title">Selected stop</h2>
         {selected === null ? <p className="insight-text">Select a stop to see the vehicle and order.</p> : (
           <div className="order-insights-list">
-            <p className="insight-text">Vehicle {selected.vehicleId} · {selected.vehicleType} · {selected.vehicleTemp}</p>
+            <p className="insight-text" title={selected.vehicleId}>Vehicle {shortId(selected.vehicleId)} · {selected.vehicleType} · {selected.vehicleTemp}</p>
             <p className="insight-text">Capacity {selected.weightCapKg} kg · {selected.volumeCapM3} m3</p>
             <p className="insight-text">Driver {selected.driverName ?? "—"}</p>
             <p className="insight-text">Depot {selected.depot} · trip {selected.tripNumber} · {selected.operationalDate}</p>
-            <p className="insight-text">Route {selected.routeId ?? "—"}</p>
-            <p className="insight-text">Order {selected.deliveryId} · {selected.brand}</p>
+            <p className="insight-text">Route {displayRouteLabel({ routeId: selected.routeId, tripNumber: selected.tripNumber })}</p>
+            <p className="insight-text" title={selected.deliveryId}>Order {shortId(selected.deliveryId)} · {selected.brand}</p>
             <p className="insight-text">Expected {selected.expectedUnits} · {selected.orderWeightKg} kg</p>
             <p className="insight-text">Planned arrival {selected.plannedArrival ?? "—"}</p>
           </div>
@@ -292,7 +337,7 @@ function RecordPanel({
               <tr><td colSpan={view === "records" ? 6 : 5} className="empty-table-cell">No loading record has been verified for this account.</td></tr>
             ) : records.map((task) => (
               <tr key={task.id} className={task.id === selectedId ? "loader-row-selected" : undefined}>
-                <td><button type="button" className="cell-id-btn loader-stop-id" onClick={() => onSelect(task.id)}>{task.tripStopId}</button></td>
+                <td><button type="button" className="cell-id-btn loader-stop-id" title={task.tripStopId} onClick={() => onSelect(task.id)}>{shortId(task.tripStopId)}</button></td>
                 <td>{task.expectedUnits}</td>
                 <td>{task.loadedUnits}</td>
                 <td>{task.shortfallUnits === null ? "—" : task.shortfallUnits}</td>
