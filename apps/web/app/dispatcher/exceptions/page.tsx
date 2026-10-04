@@ -13,6 +13,7 @@ import {
   validateCreateExceptionInput,
   type StoredException,
 } from "../../../lib/dispatcher-exceptions";
+import { shortId } from "../../../lib/short-id";
 
 export default function DispatcherExceptionsPage() {
   const router = useRouter();
@@ -294,7 +295,7 @@ export default function DispatcherExceptionsPage() {
                       onClick={() => setSelectedException(item)}
                     >
                       <td>
-                        <strong>{item.id.slice(0, 8)}...</strong>
+                        <strong title={item.id}>{shortId(item.id)}</strong>
                       </td>
                       <td>
                         <span className={`deferral-reason-badge ${info.badgeClass}`}>
@@ -349,7 +350,7 @@ export default function DispatcherExceptionsPage() {
             <div>
               <div className="card-header-row">
                 <div>
-                  <h3 className="bottom-card-title">{selectedException.id}</h3>
+                  <h3 className="bottom-card-title" title={selectedException.id}>{shortId(selectedException.id)}</h3>
                   <span className="type-text">Operational Exception Detail</span>
                 </div>
                 <span className={`deferral-reason-badge ${classifyExceptionCategory(selectedException.category).badgeClass}`}>

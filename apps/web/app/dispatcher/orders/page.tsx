@@ -15,6 +15,9 @@ import {
   type DispatcherOrder,
   type OrderCategoryTab,
 } from "../../../lib/dispatcher-orders";
+import { shortId } from "../../../lib/short-id";
+import { StatusBadge, StatusBanner } from "../../status-banner";
+import { humanActionError } from "../../../lib/status-copy";
 import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 
 type DeferralRow = { id: string; orderId: string; reason: string };
@@ -64,7 +67,7 @@ export default function DispatcherOrdersPage() {
       if (selected?.id === targetOrder.id) {
         setSelected(result.order);
       }
-      setActionFeedback(`Order ${targetOrder.orderId} successfully closed for planning (CONFIRMED).`);
+      setActionFeedback(`Order ${shortId(targetOrder.orderId)} successfully closed for planning (CONFIRMED).`);
     } else {
       if (result.code === "lifecycle_conflict") {
         // Refresh orders to reflect authoritative state
@@ -144,13 +147,14 @@ export default function DispatcherOrdersPage() {
         },
         body: JSON.stringify({ operationalDate: date }),
       });
+      const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        setError("Planning did not run.");
+        setError(humanActionError(response.status, payload, "planning"));
         return;
       }
       router.push("/dispatcher/planning");
     } catch {
-      setError("Planning could not be reached.");
+      setError(humanActionError(0, null, "planning"));
     } finally {
       setRunning(false);
     }
@@ -167,11 +171,22 @@ export default function DispatcherOrdersPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (operationalDate.status === "loading") {
+    return <StatusBanner tone="loading" title="Reading operational dates" body="Orders stay hidden until the date list is known." />;
+  }
+  if (operationalDate.selected === null) {
+    return (
+      <StatusBanner
+        tone="empty"
+        title={operationalDate.status === "empty" ? noOperationalDateMessage : selectOperationalDateMessage}
+        body="Planning, routes, and dispatch use that date. Choose it in the header."
+      />
+    );
+  }
+
   return (
     <div className="orders-page-container">
       {error && <div className="dashboard-error" role="alert">{error}</div>}
-      {operationalDate.status === "empty" ? <div className="dashboard-error" role="status">{noOperationalDateMessage}</div> : null}
-      {operationalDate.status === "ready" && operationalDate.selected === null ? <div className="dashboard-error" role="status">{selectOperationalDateMessage}</div> : null}
       {actionFeedback && <div className="dashboard-feedback" role="status">{actionFeedback}</div>}
       <section className="orders-kpi-grid" aria-label="Orders KPI Summary">
         {kpis.map((kpi) => (
@@ -234,9 +249,13 @@ export default function DispatcherOrdersPage() {
         </div>
         <div className="orders-table-tools">
           <div className="orders-search-box">
+            <SearchIcon />
             <input type="text" placeholder="Search orders..." value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search orders table" />
           </div>
-          <button type="button" className="orders-export-btn" onClick={exportVisible}>Export</button>
+          <button type="button" className="orders-export-btn" onClick={exportVisible}>
+            <ExportIcon />
+            Export
+          </button>
         </div>
       </section>
 
@@ -260,14 +279,14 @@ export default function DispatcherOrdersPage() {
               <tbody>
                 {visibleOrders.map((order) => (
                   <tr key={order.id}>
-                    <td className="cell-id"><button type="button" className="cell-id-btn" onClick={() => setSelected(order)}>{order.orderId}</button></td>
+                    <td className="cell-id"><button type="button" className="cell-id-btn" title={order.orderId} onClick={() => setSelected(order)}>{shortId(order.orderId)}</button></td>
                     <td className="cell-outlet">{order.outlet}</td>
                     <td className="cell-category">{order.brand}</td>
                     <td>{order.items}</td>
                     <td>{order.weightKg}</td>
                     <td>—</td>
                     <td>—</td>
-                    <td><span className="badge-status-pending">{order.status}</span></td>
+                    <td><StatusBadge status={order.status} /></td>
                     <td>
                       <div className="order-row-actions">
                         {order.status === "SUBMITTED" && (
@@ -293,32 +312,58 @@ export default function DispatcherOrdersPage() {
         </div>
         <aside className="orders-sidebar-panels">
           <div className="dashboard-card selected-orders-card">
-            <h2 className="selected-orders-title">Selected Orders</h2>
-            <div className="selected-orders-count">—</div>
-            <div className="selected-orders-subtitle">Planning does not accept a selected subset</div>
+            <div className="panel-title-row">
+              <span className="panel-icon" aria-hidden="true"><ClipboardIcon /></span>
+              <h2 className="selected-orders-title">Selected Orders</h2>
+            </div>
+            <div className="insight-row">
+              <span className="insight-icon-box icon-window" aria-hidden="true"><InfoIcon /></span>
+              <p className="insight-text">Planning does not accept a selected subset</p>
+            </div>
             <button type="button" className="ai-generate-btn" onClick={() => void runPlanning()} disabled={operationalDate.selected === null || running}>
+              <BoltIcon />
               {running ? "Running planning..." : "Run planning"}
             </button>
           </div>
           <div className="dashboard-card order-insights-card">
-            <h2 className="insights-card-title">Order Insights</h2>
+            <div className="panel-title-row">
+              <span className="panel-icon tone-blue" aria-hidden="true"><InsightsIcon /></span>
+              <h2 className="insights-card-title">Order Insights</h2>
+            </div>
             <div className="order-insights-list">
-              <p className="insight-text">{orders.length} orders loaded.</p>
-              <p className="insight-text">{orders.filter((order) => order.temperature === "chilled").length} chilled orders.</p>
-              <p className="insight-text">{orders.filter((order) => order.status === "DEFERRED").length} orders have deferred status.</p>
-              <p className="insight-text">Delay risk, capacity overflow, and delivery windows are not on the order record.</p>
+              <div className="insight-row">
+                <span className="insight-icon-box icon-capacity" aria-hidden="true"><PackageIcon /></span>
+                <p className="insight-text"><span className="insight-strong">{orders.length}</span> orders loaded.</p>
+              </div>
+              <div className="insight-row">
+                <span className="insight-icon-box icon-temp" aria-hidden="true"><ThermometerIcon /></span>
+                <p className="insight-text"><span className="insight-strong">{orders.filter((order) => order.temperature === "chilled").length}</span> chilled orders.</p>
+              </div>
+              <div className="insight-row">
+                <span className="insight-icon-box icon-risk" aria-hidden="true"><AlertIcon /></span>
+                <p className="insight-text"><span className="insight-strong">{orders.filter((order) => order.status === "DEFERRED").length}</span> orders have deferred status.</p>
+              </div>
+              <div className="insight-row">
+                <span className="insight-icon-box icon-window" aria-hidden="true"><InfoIcon /></span>
+                <p className="insight-text">Delay risk, capacity overflow, and delivery windows are not on the order record.</p>
+              </div>
             </div>
           </div>
           <div className="dashboard-card category-breakdown-card">
-            <h2 className="breakdown-card-title">Category Breakdown</h2>
+            <div className="panel-title-row">
+              <span className="panel-icon tone-green" aria-hidden="true"><PieIcon /></span>
+              <h2 className="breakdown-card-title">Category Breakdown</h2>
+            </div>
             <div className="breakdown-content">
               <div className="breakdown-donut-wrapper">
+                <CategoryDonut items={breakdown} total={orders.length} />
                 <div className="breakdown-donut-center"><span className="donut-center-total">{orders.length}</span></div>
               </div>
               <div className="breakdown-legend">
                 {breakdown.length === 0 && <div className="legend-row">No brands loaded</div>}
-                {breakdown.map((item) => (
+                {breakdown.map((item, index) => (
                   <div key={item.name} className="legend-row">
+                    <span className="legend-dot" style={{ background: brandColor(item.name, index) }} />
                     <span className="legend-label">{item.name} ({item.count}) {item.percentage}%</span>
                   </div>
                 ))}
@@ -336,12 +381,12 @@ export default function DispatcherOrdersPage() {
             <tbody>
               {recent.map((order) => (
                 <tr key={order.id}>
-                  <td className="cell-id">{order.orderId}</td>
+                  <td className="cell-id" title={order.orderId}>{shortId(order.orderId)}</td>
                   <td>{order.outlet}</td>
                   <td>{order.brand}</td>
                   <td>{order.items}</td>
                   <td>{order.submittedAt ?? "—"}</td>
-                  <td>{order.status}</td>
+                  <td><StatusBadge status={order.status} /></td>
                 </tr>
               ))}
               {recent.length === 0 && <tr><td colSpan={6}>No orders loaded.</td></tr>}
@@ -357,7 +402,7 @@ export default function DispatcherOrdersPage() {
                 const order = orderById.get(deferral.orderId);
                 return (
                   <tr key={deferral.id}>
-                    <td>{order?.orderId ?? deferral.orderId}</td>
+                    <td title={order?.orderId ?? deferral.orderId}>{shortId(order?.orderId ?? deferral.orderId)}</td>
                     <td>{order?.outlet ?? "—"}</td>
                     <td>{deferral.reason}</td>
                     <td>—</td>
@@ -374,7 +419,7 @@ export default function DispatcherOrdersPage() {
         <div className="order-detail-backdrop" onClick={() => setSelected(null)}>
           <div className="order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="order-detail-title" onClick={(event) => event.stopPropagation()}>
             <div className="order-detail-header">
-              <h2 id="order-detail-title">{selected.orderId}</h2>
+              <h2 id="order-detail-title" title={selected.orderId}>{shortId(selected.orderId)}</h2>
               <button type="button" onClick={() => setSelected(null)} aria-label="Close detail modal">✕</button>
             </div>
             <div className="order-detail-body">
@@ -386,7 +431,7 @@ export default function DispatcherOrdersPage() {
               <p>Units {selected.items}</p>
               <p>Weight {selected.weightKg} kg</p>
               <p>Volume {selected.volumeM3} m3</p>
-              <p>Status {selected.status}</p>
+              <p>Status <StatusBadge status={selected.status} /></p>
               <p>Delivery window —</p>
               <p>Priority —</p>
             </div>
@@ -408,6 +453,147 @@ export default function DispatcherOrdersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function ExportIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function ClipboardIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+    </svg>
+  );
+}
+
+function InsightsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M12 2a7 7 0 0 0-4 12c.6.6 1 1.5 1 2h6c0-.5.4-1.4 1-2a7 7 0 0 0-4-12z" />
+    </svg>
+  );
+}
+
+function PieIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </svg>
+  );
+}
+
+function PackageIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
+
+function ThermometerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="11" x2="12" y2="16" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  );
+}
+
+function BoltIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function brandColor(name: string, index: number): string {
+  const known: Record<string, string> = {
+    fresh: "#16a34a",
+    style: "#db2777",
+    tech: "#2563eb",
+    unspecified: "#94a3b8",
+  };
+  return known[name.toLowerCase()] ?? ["#0f766e", "#7c3aed", "#d97706", "#0284c7"][index % 4]!;
+}
+
+function CategoryDonut({ items, total }: { items: { name: string; count: number }[]; total: number }) {
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  if (items.length <= 1) {
+    const color = items.length === 1 ? brandColor(items[0]!.name, 0) : "#e2e8f0";
+    return (
+      <svg className="breakdown-donut-svg" viewBox="0 0 84 84" aria-hidden="true">
+        <circle cx="42" cy="42" r={radius} fill="none" stroke={color} strokeWidth="10" />
+      </svg>
+    );
+  }
+  let offset = 0;
+  return (
+    <svg className="breakdown-donut-svg" viewBox="0 0 84 84" aria-hidden="true">
+      <circle cx="42" cy="42" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="10" />
+      {items.map((item, index) => {
+        const length = total === 0 ? 0 : (item.count / total) * circumference;
+        const dash = `${length} ${circumference - length}`;
+        const sliceOffset = offset;
+        offset -= length;
+        return (
+          <circle
+            key={item.name}
+            cx="42"
+            cy="42"
+            r={radius}
+            fill="none"
+            stroke={brandColor(item.name, index)}
+            strokeWidth="10"
+            strokeDasharray={dash}
+            strokeDashoffset={sliceOffset}
+          />
+        );
+      })}
+    </svg>
   );
 }
 

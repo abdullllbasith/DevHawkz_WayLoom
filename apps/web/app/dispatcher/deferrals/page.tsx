@@ -14,7 +14,9 @@ import {
   readDeferralList,
   type EnrichedDeferral,
 } from "../../../lib/dispatcher-deferrals";
+import { shortId } from "../../../lib/short-id";
 import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { StatusBadge } from "../../status-banner";
 import { useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanDeferral } from "../../../lib/dispatcher-planning";
 
@@ -310,7 +312,7 @@ export default function DispatcherDeferralsPage() {
                       onClick={() => setSelectedDeferral(item)}
                     >
                       <td>
-                        <strong>{item.deliveryId}</strong>
+                        <strong title={item.deliveryId}>{shortId(item.deliveryId)}</strong>
                       </td>
                       <td>
                         <div>{item.outlet}</div>
@@ -328,7 +330,7 @@ export default function DispatcherDeferralsPage() {
                         </span>
                       </td>
                       <td>
-                        <span className="status-badge-planned">{item.status}</span>
+                        <StatusBadge status={item.status} />
                       </td>
                       <td>
                         <button
@@ -367,7 +369,7 @@ export default function DispatcherDeferralsPage() {
             <div>
               <div className="card-header-row">
                 <div>
-                  <h3 className="bottom-card-title">{selectedDeferral.deliveryId}</h3>
+                  <h3 className="bottom-card-title" title={selectedDeferral.deliveryId}>{shortId(selectedDeferral.deliveryId)}</h3>
                   <span className="type-text">Unallocated Order Details</span>
                 </div>
                 <span className={`deferral-reason-badge ${selectedDeferral.reasonInfo.badgeClass}`}>

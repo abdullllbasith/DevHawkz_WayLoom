@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 
 import { confirmationCards, unavailableApproval } from "../../../lib/dispatcher-confirmation";
 import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { StatusBadge } from "../../status-banner";
 import { noOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanningView } from "../../../lib/dispatcher-planning";
+import { shortId } from "../../../lib/short-id";
 
 export function ApprovedPlanView() {
   const router = useRouter();
@@ -123,15 +125,15 @@ export function ApprovedPlanView() {
                     <td>
                       <div className="vehicle-id-cell">
                         <span className="vehicle-id-icon" aria-hidden="true" />
-                        <span className="vehicle-code-text">{trip.vehicleId}</span>
+                        <span className="vehicle-code-text" title={trip.vehicleId}>{shortId(trip.vehicleId)}</span>
                       </div>
                     </td>
                     <td><span className="type-text">—</span></td>
                     <td>—</td>
                     <td><span className="orders-count-text">{trip.stops.length}</span></td>
                     <td>—</td>
-                    <td>{trip.routeId ?? trip.depot}</td>
-                    <td><span className={trip.status === "CONFIRMED" ? "status-badge-assigned" : "type-text"}>{trip.status}</span></td>
+                    <td>{trip.depot}</td>
+                    <td><StatusBadge status={trip.status} /></td>
                   </tr>
                 ))}
                 {view.trips.length === 0 && <tr><td colSpan={7}>No trips for {view.operationalDate ?? "the loaded date"}.</td></tr>}
@@ -167,11 +169,11 @@ export function ApprovedPlanView() {
                 return (
                   <tr key={stop.id}>
                     <td>{stop.sequence}</td>
-                    <td>{order?.orderId ?? stop.orderId}</td>
+                    <td title={order?.orderId ?? stop.orderId}>{shortId(order?.orderId ?? stop.orderId)}</td>
                     <td>{order?.outlet ?? "—"}</td>
-                    <td>{trip.vehicleId}</td>
+                    <td title={trip.vehicleId}>{shortId(trip.vehicleId)}</td>
                     <td>{stop.plannedArrival ?? "—"}</td>
-                    <td>{trip.status}</td>
+                    <td><StatusBadge status={trip.status} /></td>
                   </tr>
                 );
               })}
@@ -195,7 +197,7 @@ export function ApprovedPlanView() {
                   const order = orderById.get(deferral.orderId);
                   return (
                     <tr key={deferral.id}>
-                      <td>{order?.orderId ?? deferral.orderId}</td>
+                      <td title={order?.orderId ?? deferral.orderId}>{shortId(order?.orderId ?? deferral.orderId)}</td>
                       <td>{order?.outlet ?? "—"}</td>
                       <td>{deferral.reason}</td>
                       <td>—</td>

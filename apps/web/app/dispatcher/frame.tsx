@@ -4,16 +4,16 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { BrandLogo } from "../brand-logo";
 import { activeDispatcherHref, dispatcherNavigation } from "../../lib/dispatcher-shell";
+import { NotificationBell } from "../notification-bell";
 import { DispatcherLogout } from "./logout";
 import { useOperationalDate } from "./operational-date";
 
 export function DispatcherFrame({
-  apiOrigin,
   displayName,
   children,
 }: {
-  apiOrigin: string;
   displayName: string;
   children: ReactNode;
 }) {
@@ -31,7 +31,7 @@ export function DispatcherFrame({
   const isDashboardPage = pathname === "/dispatcher";
 
   let breadcrumb = "Dashboard";
-  let title = "Good evening, Dispatcher";
+  let title = "Dispatcher";
   let subtitle = "Operational overview";
   let dateText = "Operational date";
 
@@ -82,21 +82,29 @@ export function DispatcherFrame({
     <div className="dispatcher-shell">
       <aside className="dispatcher-sidebar">
         <div className="dispatcher-brand">
-          <div className="dispatcher-logo-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <polygon points="14,2 18,8 14,14 10,8" fill="#0F172A" />
-              <polygon points="26,14 20,18 14,14 20,10" fill="#0F172A" />
-              <polygon points="14,26 10,20 14,14 18,20" fill="#0F172A" />
-              <polygon points="2,14 8,10 14,14 8,18" fill="#0F172A" />
-              <circle cx="14" cy="14" r="2" fill="#2563EB" />
-            </svg>
-          </div>
-          <span className="dispatcher-brand-name">WayLoom</span>
+          <BrandLogo />
         </div>
 
         <nav className="dispatcher-nav" aria-label="Dispatcher" suppressHydrationWarning>
           {dispatcherNavigation.map((item) => {
             const isActive = item.href === active;
+            const quiet = "quiet" in item && item.quiet;
+            if (quiet) {
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  className="dispatcher-nav-link quiet"
+                  disabled
+                  aria-disabled="true"
+                >
+                  <span className="dispatcher-nav-icon" aria-hidden="true">
+                    {navIcon(item.label)}
+                  </span>
+                  <span className="dispatcher-nav-label">{item.label}</span>
+                </button>
+              );
+            }
             return (
               <Link
                 key={item.href}
@@ -116,14 +124,14 @@ export function DispatcherFrame({
 
         <div className="dispatcher-help-card">
           <p className="dispatcher-help-title">Need Help?</p>
-          <p className="dispatcher-help-sub">Read guides &amp; documentation</p>
-          <button type="button" className="dispatcher-help-btn" onClick={() => window.open("/docs", "_blank")}>
+          <p className="dispatcher-help-sub">No guide is connected for this workspace.</p>
+          <button type="button" className="dispatcher-help-btn" disabled>
             View Guide
           </button>
         </div>
 
         <div className="dispatcher-sidebar-footer">
-          <DispatcherLogout apiOrigin={apiOrigin} />
+          <DispatcherLogout />
         </div>
       </aside>
 
@@ -152,8 +160,9 @@ export function DispatcherFrame({
               <input
                 type="text"
                 className="dispatcher-search-input"
-                placeholder="Search orders, outlets, items..."
-                aria-label="Search orders, outlets, items"
+                placeholder="Search is not available"
+                aria-label="Search is not available"
+                disabled
               />
             </div>
 
@@ -178,12 +187,7 @@ export function DispatcherFrame({
               </select>
             </label>
 
-            <button type="button" className="dispatcher-icon-btn" aria-label="Notifications">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
+            <NotificationBell role="dispatcher" />
 
             <div className="dispatcher-user-profile" aria-label={`User profile for ${displayName}`}>
               <div className="dispatcher-avatar" aria-hidden="true">

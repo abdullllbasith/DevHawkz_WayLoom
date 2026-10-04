@@ -1,5 +1,7 @@
 import type { PlanTrip } from "./dispatcher-planning";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type RouteStatusTab = "All" | "Confirmed" | "Planned";
 
 const ROUTE_COLOR_PALETTE = [
@@ -12,11 +14,9 @@ const ROUTE_COLOR_PALETTE = [
 ] as const;
 
 export function displayRouteId(trip: { routeId: string | null; tripNumber: number; vehicleId: string }): string {
-  if (trip.routeId && trip.routeId.trim().length > 0) {
-    return trip.routeId;
-  }
-  const paddedNumber = String(trip.tripNumber).padStart(3, "0");
-  return `RTE-${paddedNumber}`;
+  const routeId = trip.routeId?.trim() ?? "";
+  if (routeId.length > 0 && !UUID_PATTERN.test(routeId)) return routeId;
+  return `RTE-${String(trip.tripNumber).padStart(3, "0")}`;
 }
 
 export function routeColor(index: number): string {
@@ -89,6 +89,7 @@ export function filterRoutes(
     const routeId = displayRouteId(trip).toLowerCase();
     const searchable = [
       routeId,
+      trip.id.toLowerCase(),
       trip.vehicleId.toLowerCase(),
       trip.depot.toLowerCase(),
       trip.status.toLowerCase(),

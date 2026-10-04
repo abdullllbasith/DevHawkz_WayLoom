@@ -26,8 +26,10 @@ test("primary navigation resolves to the submitted dispatcher routes", () => {
     "/dispatcher",
     "/dispatcher/orders",
     "/dispatcher/planning",
-    "/dispatcher/vehicles",
     "/dispatcher/routes",
+    "/dispatcher/deferrals",
+    "/dispatcher/exceptions",
+    "/dispatcher/vehicles",
     "/dispatcher/workflow",
     "/dispatcher/analytics",
     "/dispatcher/reports",
@@ -37,8 +39,8 @@ test("primary navigation resolves to the submitted dispatcher routes", () => {
   assert.equal(activeDispatcherHref("/dispatcher/orders"), "/dispatcher/orders");
   assert.equal(activeDispatcherHref("/dispatcher/planning"), "/dispatcher/planning");
   assert.equal(activeDispatcherHref("/dispatcher/allocation-confirmation"), "/dispatcher/planning");
-  assert.equal(activeDispatcherHref("/dispatcher/deferrals"), null);
-  assert.equal(activeDispatcherHref("/dispatcher/exceptions"), null);
+  assert.equal(activeDispatcherHref("/dispatcher/deferrals"), "/dispatcher/deferrals");
+  assert.equal(activeDispatcherHref("/dispatcher/exceptions"), "/dispatcher/exceptions");
   assert.equal(activeDispatcherHref("/dispatcher/vehicles"), "/dispatcher/vehicles");
   assert.equal(activeDispatcherHref("/dispatcher/routes"), "/dispatcher/routes");
   assert.equal(activeDispatcherHref("/dispatcher/routes/route-1"), "/dispatcher/routes");
@@ -47,8 +49,9 @@ test("primary navigation resolves to the submitted dispatcher routes", () => {
   assert.equal(activeDispatcherHref("/dispatcher/reports"), "/dispatcher/reports");
   assert.equal(activeDispatcherHref("/dispatcher/settings"), "/dispatcher/settings");
   assert.equal(activeDispatcherHref("/dispatcher/orders/extra"), "/dispatcher/orders");
-  assert.equal(dispatcherNavigation.some((item) => item.label === "Deferrals"), false);
-  assert.equal(dispatcherNavigation.some((item) => item.label === "Exceptions"), false);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Deferrals"), true);
+  assert.equal(dispatcherNavigation.some((item) => item.label === "Exceptions"), true);
+  assert.equal(dispatcherNavigation.find((item) => item.href === "/dispatcher/vehicles")?.quiet, true);
   assert.equal(dispatcherNavigation.some((item) => item.label === "Allocation Confirmation"), false);
 });
 

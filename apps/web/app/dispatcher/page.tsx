@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +17,11 @@ import {
   type DashboardTrip,
   type OrderCategoryTab,
 } from "../../lib/dispatcher-dashboard";
+import { aiFallbackMessage } from "../../lib/ai-fallback";
+import { readPlanningExplanation } from "../../lib/dispatcher-planning";
+import { humanActionError } from "../../lib/status-copy";
+import { StatusBadge } from "../status-banner";
+import { shortId } from "../../lib/short-id";
 import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "./operational-date";
 
 export default function DispatcherDashboardPage() {
@@ -32,6 +37,11 @@ export default function DispatcherDashboardPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [planningError, setPlanningError] = useState<string | null>(null);
   const [runningPlan, setRunningPlan] = useState(false);
+  const [assistantTab, setAssistantTab] = useState<"plan" | "chat">("plan");
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const chatThreadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +112,42 @@ export default function DispatcherDashboardPage() {
   const alerts = dashboardAlerts({ deferralCount, exceptionCount });
   const summary = planningSummary({ trips, deferralCount });
 
+  useEffect(() => {
+    const thread = chatThreadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, [chatMessages, chatBusy]);
+
+  async function csrfToken() {
+    const response = await fetch("/api/auth/csrf", { cache: "no-store", credentials: "include" });
+    if (!response.ok) return "";
+    const data = (await response.json()) as { csrfToken?: string };
+    return data.csrfToken ?? "";
+  }
+
+  async function sendChat() {
+    const question = chatDraft.trim();
+    if (planningDate === null || question.length === 0 || chatBusy) return;
+    setChatDraft("");
+    setChatBusy(true);
+    setChatMessages((current) => [...current, { role: "user", text: question }]);
+    try {
+      const token = await csrfToken();
+      const response = await fetch(`/api/planning/${encodeURIComponent(planningDate)}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { "x-wayloom-csrf": token } : {}) },
+        body: JSON.stringify({ question }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const read = readPlanningExplanation(payload);
+      const text = response.ok && read !== null ? read.text : aiFallbackMessage("unavailable");
+      setChatMessages((current) => [...current, { role: "assistant", text }]);
+    } catch {
+      setChatMessages((current) => [...current, { role: "assistant", text: aiFallbackMessage("unavailable") }]);
+    } finally {
+      setChatBusy(false);
+    }
+  }
+
   async function runPlanning() {
     if (planningDate === null || runningPlan) return;
     setRunningPlan(true);
@@ -122,12 +168,13 @@ export default function DispatcherDashboardPage() {
         body: JSON.stringify({ operationalDate: planningDate }),
       });
       if (!response.ok) {
-        setPlanningError("Planning did not run. The existing feasibility check did not return a result.");
+        const payload: unknown = await response.json().catch(() => null);
+        setPlanningError(humanActionError(response.status, payload, "planning"));
         return;
       }
       router.push("/dispatcher/planning");
     } catch {
-      setPlanningError("Planning could not be reached.");
+      setPlanningError(humanActionError(0, null, "planning"));
     } finally {
       setRunningPlan(false);
     }
@@ -232,7 +279,7 @@ export default function DispatcherDashboardPage() {
               <tbody>
                 {visibleOrders.map((order) => (
                   <tr key={order.id}>
-                    <td className="cell-id">{order.orderId}</td>
+                    <td className="cell-id" title={order.orderId}>{shortId(order.orderId)}</td>
                     <td className="cell-outlet">{order.outlet}</td>
                     <td className="cell-category">{order.brand}</td>
                     <td>{order.items}</td>
@@ -240,7 +287,7 @@ export default function DispatcherDashboardPage() {
                     <td>{order.deliveryWindow}</td>
                     <td>{order.priority}</td>
                     <td>
-                      <span className="badge-status-pending">{order.status}</span>
+                      <StatusBadge status={order.status} />
                     </td>
                   </tr>
                 ))}
@@ -260,14 +307,42 @@ export default function DispatcherDashboardPage() {
           <h2 className="ai-assistant-title">Planning</h2>
 
           <div className="ai-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected="true" className="ai-tab-btn active">
+            <button type="button" role="tab" aria-selected={assistantTab === "plan"} className={`ai-tab-btn ${assistantTab === "plan" ? "active" : ""}`} onClick={() => setAssistantTab("plan")}>
               Quick Plan
             </button>
-            <button type="button" role="tab" aria-selected="false" aria-disabled="true" disabled className="ai-tab-btn" title="No approved chat capability">
-              Chat unavailable
+            <button type="button" role="tab" aria-selected={assistantTab === "chat"} className={`ai-tab-btn ${assistantTab === "chat" ? "active" : ""}`} onClick={() => setAssistantTab("chat")}>
+              Chat
             </button>
           </div>
 
+          {assistantTab === "chat" ? (
+            <div className="ai-chat-panel">
+              <div className="ai-section-heading">Ask about this plan</div>
+              <p className="kpi-subtitle">Answers use the stored plan for {planningDate ?? "the selected date"} only. They do not change the allocation.</p>
+              <div className="ai-chat-thread" ref={chatThreadRef} aria-live="polite">
+                {chatMessages.length === 0 && <p className="ai-chat-line">Ask why an order was deferred, which vehicle served an order, or what the plan contains.</p>}
+                {chatMessages.map((message, index) => (
+                  <p key={`${message.role}-${index}`} className="ai-chat-line"><strong>{message.role === "user" ? "You" : "Plan"}:</strong> {message.text}</p>
+                ))}
+              </div>
+              <form className="ai-chat-form" onSubmit={(event) => { event.preventDefault(); void sendChat(); }}>
+                <div className="orders-search-box">
+                  <input
+                    value={chatDraft}
+                    onChange={(event) => setChatDraft(event.target.value)}
+                    aria-label="Question about the plan"
+                    placeholder="Ask about the stored plan"
+                    maxLength={240}
+                    disabled={planningDate === null || chatBusy}
+                  />
+                </div>
+                <button type="submit" className="ai-generate-btn" disabled={planningDate === null || chatBusy || chatDraft.trim().length === 0}>
+                  <span>{chatBusy ? "Checking the plan..." : "Send"}</span>
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="ai-plan-panel">
           <div className="ai-section-heading">Planning scope</div>
           <p className="kpi-subtitle">No optimization objective is approved. This runs the existing feasibility check only.</p>
 
@@ -292,6 +367,8 @@ export default function DispatcherDashboardPage() {
             </svg>
             <span>{runningPlan ? "Running planning..." : "Run planning"}</span>
           </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -304,10 +381,18 @@ export default function DispatcherDashboardPage() {
             <ul className="vehicle-status-list">
               {trips.map((trip) => (
                 <li key={trip.id} className="vehicle-row">
-                  <span className="vehicle-id">{trip.vehicleId}</span>
+                  <span className="vehicle-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="1" y="6" width="15" height="10" rx="1" />
+                      <polygon points="16 9 20 9 23 12 23 16 16 16 16 9" />
+                      <circle cx="6" cy="18" r="2" />
+                      <circle cx="18" cy="18" r="2" />
+                    </svg>
+                  </span>
+                  <span className="vehicle-id" title={trip.vehicleId}>{shortId(trip.vehicleId)}</span>
                   <span className="vehicle-type">Trip {trip.tripNumber}</span>
                   <span className="vehicle-type">{trip.depot}</span>
-                  <span className="vehicle-badge">{trip.status}</span>
+                  <StatusBadge status={trip.status} />
                   <span className="vehicle-percent">{trip.stopCount} stops</span>
                 </li>
               ))}

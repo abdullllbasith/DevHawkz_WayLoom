@@ -37,6 +37,10 @@ const mockTrips: PlanTrip[] = [
 test("displayRouteId prefers assigned routeId and formats fallback", () => {
   assert.equal(displayRouteId(mockTrips[0]!), "RTE-001");
   assert.equal(displayRouteId(mockTrips[1]!), "RTE-002");
+  assert.equal(
+    displayRouteId({ ...mockTrips[1]!, routeId: "0e18a809-55ee-413f-b5ba-2b1d9d2267ea" }),
+    "RTE-002",
+  );
 });
 
 test("routesKpis counts routes from real data and leaves unprovided metrics as dash", () => {

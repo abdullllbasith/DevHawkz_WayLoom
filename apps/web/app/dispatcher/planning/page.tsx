@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 
 import { aiFallbackMessage } from "../../../lib/ai-fallback";
 import { confirmPlanOnServer } from "../../../lib/dispatcher-confirmation";
+import { DEFERRAL_REASON_INFO, type DeferralReasonCode } from "../../../lib/dispatcher-deferrals";
 import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { StatusBadge, StatusBanner } from "../../status-banner";
+import { humanActionError } from "../../../lib/status-copy";
 import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { filterTrips, planningCounts, readPlanningExplanation, readPlanningResult, type PlanTrip, type PlanningView } from "../../../lib/dispatcher-planning";
+import { shortId } from "../../../lib/short-id";
 
 const emptyView: PlanningView = { operationalDate: null, trips: [], deferrals: [] };
 
@@ -62,6 +66,35 @@ export default function DispatcherPlanningPage() {
     };
   }, [operationalDate.selected, operationalDate.status]);
 
+  useEffect(() => {
+    if (view.operationalDate === null || (view.trips.length === 0 && view.deferrals.length === 0)) {
+      setExplanation(null);
+      return;
+    }
+    let cancelled = false;
+    setExplainBusy(true);
+    void (async () => {
+      try {
+        const token = await csrfToken();
+        const response = await fetch(`/api/planning/${encodeURIComponent(view.operationalDate ?? "")}/explanation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { "x-wayloom-csrf": token } : {}) },
+          body: JSON.stringify({}),
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        const read = readPlanningExplanation(payload);
+        if (!cancelled) setExplanation(response.ok && read !== null ? read.text : aiFallbackMessage("unavailable"));
+      } catch {
+        if (!cancelled) setExplanation(aiFallbackMessage("unavailable"));
+      } finally {
+        if (!cancelled) setExplainBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [view.operationalDate, view.trips.length, view.deferrals.length]);
+
   const counts = planningCounts(view);
   const trips = filterTrips(view.trips, query);
   const orderById = new Map(orders.map((order) => [order.id, order]));
@@ -86,13 +119,14 @@ export default function DispatcherPlanningPage() {
         headers: { "Content-Type": "application/json", ...(token ? { "x-wayloom-csrf": token } : {}) },
         body: JSON.stringify({ operationalDate: view.operationalDate }),
       });
+      const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        setError("Planning did not run.");
+        setError(humanActionError(response.status, payload, "planning"));
         return;
       }
       await load();
     } catch {
-      setError("Planning could not be reached.");
+      setError(humanActionError(0, null, "planning"));
     } finally {
       setBusy(null);
     }
@@ -134,17 +168,30 @@ export default function DispatcherPlanningPage() {
     router.push("/dispatcher/allocation-confirmation");
   }
 
+  if (operationalDate.status === "loading") {
+    return <StatusBanner tone="loading" title="Reading the operational date" body="The planning result stays hidden until a date is selected." />;
+  }
+  if (operationalDate.selected === null) {
+    return (
+      <StatusBanner
+        tone="empty"
+        title={operationalDate.status === "empty" ? noOperationalDateMessage : selectOperationalDateMessage}
+        body="Planning, routes, and dispatch use that date. Choose it in the header."
+      />
+    );
+  }
+
   return (
     <div className="planning-page-container">
       {error && <div className="dashboard-error" role="alert">{error}</div>}
+      {view.trips.length === 0 && error === null ? (
+        <StatusBanner tone="info" title="No trips in this planning result" body="A confirmed order on this date can be planned. A date outside the operating calendar stays empty. Map, fuel, on-time, and CO₂ are not provided." />
+      ) : null}
       <section className="planning-kpi-grid" aria-label="Planning Summary Metrics">
         <Kpi label="Vehicles on plan" value={counts.vehicles} subtitle="Distinct vehicles in the result" />
         <Kpi label="Orders scheduled" value={counts.scheduled} subtitle={`${counts.deferred} deferred`} />
-        <Kpi label="Estimated on-time" value="—" subtitle="Not in the planning result" />
-        <Kpi label="Estimated fuel" value="—" subtitle="Not in the planning result" />
-        <Kpi label="CO₂ reduction" value="—" subtitle="Not in the planning result" />
-        <Kpi label="Constraint violations" value="—" subtitle="Feasibility stays on the server" />
       </section>
+      <p className="kpi-subtitle">Map, fuel, on-time, and CO₂ are not provided.</p>
 
       <section className="planning-tab-bar">
         <div className="tab-pill-group" role="tablist">
@@ -159,6 +206,10 @@ export default function DispatcherPlanningPage() {
       <section className="planning-middle-grid">
         <div className="dashboard-card planning-table-card">
           <div className="planning-search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Filter trips" placeholder="Search vehicle, depot, or status" />
           </div>
           {tab !== "unassigned" ? (
@@ -171,7 +222,19 @@ export default function DispatcherPlanningPage() {
               <tbody>
                 {trips.map((trip) => (
                   <tr key={trip.id}>
-                    <td><button type="button" className="cell-id-btn" onClick={() => { setSelected(trip); setTab("route"); }}>{trip.vehicleId}</button></td>
+                    <td>
+                      <div className="vehicle-id-cell">
+                        <span className="vehicle-id-icon" aria-hidden="true">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="1" y="6" width="15" height="10" rx="1" />
+                            <polygon points="16 9 20 9 23 12 23 16 16 16 16 9" />
+                            <circle cx="6" cy="18" r="2" />
+                            <circle cx="18" cy="18" r="2" />
+                          </svg>
+                        </span>
+                        <button type="button" className="cell-id-btn" title={trip.vehicleId} onClick={() => { setSelected(trip); setTab("route"); }}>{shortId(trip.vehicleId)}</button>
+                      </div>
+                    </td>
                     <td>—</td>
                     <td>—</td>
                     <td>{trip.tripNumber}</td>
@@ -179,7 +242,7 @@ export default function DispatcherPlanningPage() {
                     <td>—</td>
                     <td>—</td>
                     <td>{trip.depot}</td>
-                    <td>{trip.status}</td>
+                    <td><StatusBadge status={trip.status} /></td>
                   </tr>
                 ))}
                 {trips.length === 0 && <tr><td colSpan={9}>No trips in the planning result.</td></tr>}
@@ -193,7 +256,7 @@ export default function DispatcherPlanningPage() {
                   const order = orderById.get(deferral.orderId);
                   return (
                     <tr key={deferral.id}>
-                      <td>{order?.orderId ?? deferral.orderId}</td>
+                      <td title={order?.orderId ?? deferral.orderId}>{shortId(order?.orderId ?? deferral.orderId)}</td>
                       <td>{order?.outlet ?? "—"}</td>
                       <td>{deferral.reason}</td>
                       <td>—</td>
@@ -207,47 +270,52 @@ export default function DispatcherPlanningPage() {
           )}
         </div>
         <div className="dashboard-card planning-route-card">
-          <h3 className="route-card-title">{activeTrip ? `${activeTrip.vehicleId} trip ${activeTrip.tripNumber}` : "Route overview"}</h3>
-          <div className="routes-map-container" role="img" aria-label="Route map unavailable">
-            <p className="kpi-subtitle">Map geometry, distance, and duration are not in the planning result.</p>
-          </div>
+          <h3 className="route-card-title" title={activeTrip?.vehicleId}>{activeTrip ? `${shortId(activeTrip.vehicleId)} trip ${activeTrip.tripNumber}` : "Route overview"}</h3>
           <ul className="loader-checklist">
             {(activeTrip?.stops ?? []).map((stop) => {
               const order = orderById.get(stop.orderId);
-              return <li key={stop.id} className="loader-check-item">{stop.sequence}. {order?.orderId ?? stop.orderId} {order?.outlet ?? "—"} {stop.plannedArrival ?? "—"}</li>;
+              const orderLabel = order?.orderId ?? stop.orderId;
+              const stopNumber = (activeTrip?.stops.some((item) => item.sequence === 0) ? stop.sequence + 1 : stop.sequence);
+              return (
+                <li key={stop.id} className="loader-check-item" title={orderLabel}>
+                  Stop {stopNumber} · {orderLabel} · {order?.outlet ?? "—"} · {stop.plannedArrival ?? "arrival not stored"}
+                </li>
+              );
             })}
             {(activeTrip?.stops.length ?? 0) === 0 && <li className="loader-check-item">No stops loaded.</li>}
           </ul>
+          <p className="kpi-subtitle">A map is not stored with this plan.</p>
         </div>
       </section>
 
       <section className="planning-bottom-grid">
         <div className="dashboard-card">
           <h3 className="bottom-card-title">Deferred orders ({view.deferrals.length})</h3>
-          <p className="kpi-subtitle">Suggested actions are not provided. Reason codes stay as returned.</p>
           <ul className="loader-checklist">
             {view.deferrals.map((deferral) => {
               const order = orderById.get(deferral.orderId);
-              return <li key={deferral.id} className="loader-check-item">{order?.orderId ?? deferral.orderId} · {deferral.reason}</li>;
+              const orderLabel = order?.orderId ?? deferral.orderId;
+              return <li key={deferral.id} className="loader-check-item" title={orderLabel}>{orderLabel} · {reasonLabel(deferral.reason)}</li>;
             })}
             {view.deferrals.length === 0 && <li className="loader-check-item">No deferred orders.</li>}
           </ul>
         </div>
         <div className="dashboard-card">
           <h3 className="bottom-card-title">Plan constraints</h3>
-          <p className="kpi-subtitle">The server feasibility result is authoritative. This screen does not recheck constraints.</p>
+          <ul className="loader-checklist">
+            {constraintLines(view.deferrals).map((line) => <li key={line} className="loader-check-item">{line}</li>)}
+          </ul>
         </div>
         <div className="dashboard-card">
           <h3 className="bottom-card-title">Plan vs previous</h3>
-          <p className="kpi-subtitle">No previous plan comparison is stored.</p>
+          <p className="kpi-subtitle">No earlier plan is stored for this date.</p>
         </div>
         <div className="dashboard-card">
           <h3 className="bottom-card-title">AI reasoning</h3>
-          <p className="kpi-subtitle">Advisory only. The stored allocation and deferrals stay unchanged.</p>
-          <button type="button" className="btn-regenerate-plan" onClick={() => void explainPlan()} disabled={view.operationalDate === null || busy !== null || explainBusy}>
-            {explainBusy ? "Requesting explanation..." : "Explain this plan"}
+          <p className="kpi-subtitle">{explainBusy ? "Reading the stored plan..." : explanation ?? "No stored plan to explain."}</p>
+          <button type="button" className="btn-regenerate-plan" onClick={() => void explainPlan()} disabled={view.operationalDate === null || busy !== null || explainBusy || (view.trips.length === 0 && view.deferrals.length === 0)}>
+            {explainBusy ? "Reading the stored plan..." : "Refresh explanation"}
           </button>
-          <p className="kpi-subtitle">{explanation ?? "No explanation requested."}</p>
         </div>
       </section>
 
@@ -265,6 +333,23 @@ export default function DispatcherPlanningPage() {
       <p className="kpi-subtitle">Operational date {view.operationalDate ?? "—"}</p>
     </div>
   );
+}
+
+function reasonLabel(reason: string): string {
+  if (Object.prototype.hasOwnProperty.call(DEFERRAL_REASON_INFO, reason)) {
+    return DEFERRAL_REASON_INFO[reason as DeferralReasonCode].label;
+  }
+  return reason;
+}
+
+function constraintLines(deferrals: PlanningView["deferrals"]): string[] {
+  if (deferrals.length === 0) return ["No constraint failure is recorded for this plan."];
+  const lines = deferrals.map((deferral) => {
+    if (!Object.prototype.hasOwnProperty.call(DEFERRAL_REASON_INFO, deferral.reason)) return deferral.reason;
+    const info = DEFERRAL_REASON_INFO[deferral.reason as DeferralReasonCode];
+    return `${info.label}: ${info.description}`;
+  });
+  return [...new Set(lines)];
 }
 
 function Kpi({ label, value, subtitle }: { label: string; value: string; subtitle: string }) {

@@ -4,12 +4,14 @@ export const dispatcherNavigation = [
   { label: "Dashboard", href: "/dispatcher" },
   { label: "Orders", href: "/dispatcher/orders" },
   { label: "AI Planning", href: "/dispatcher/planning" },
-  { label: "Vehicles", href: "/dispatcher/vehicles" },
   { label: "Routes", href: "/dispatcher/routes" },
-  { label: "Workflow", href: "/dispatcher/workflow" },
-  { label: "Analytics", href: "/dispatcher/analytics" },
-  { label: "Reports", href: "/dispatcher/reports" },
-  { label: "Settings", href: "/dispatcher/settings" },
+  { label: "Deferrals", href: "/dispatcher/deferrals" },
+  { label: "Exceptions", href: "/dispatcher/exceptions" },
+  { label: "Vehicles", href: "/dispatcher/vehicles", quiet: true },
+  { label: "Workflow", href: "/dispatcher/workflow", quiet: true },
+  { label: "Analytics", href: "/dispatcher/analytics", quiet: true },
+  { label: "Reports", href: "/dispatcher/reports", quiet: true },
+  { label: "Settings", href: "/dispatcher/settings", quiet: true },
 ] as const;
 
 export type DispatcherAccess = "anonymous" | "forbidden" | "allowed";
@@ -55,10 +57,10 @@ export function activeDispatcherHref(pathname: string): string | null {
     return "/dispatcher/planning";
   }
   if (pathname === "/dispatcher/deferrals" || pathname.startsWith("/dispatcher/deferrals/")) {
-    return null;
+    return "/dispatcher/deferrals";
   }
   if (pathname === "/dispatcher/exceptions" || pathname.startsWith("/dispatcher/exceptions/")) {
-    return null;
+    return "/dispatcher/exceptions";
   }
   const match = dispatcherNavigation.find((item) => item.href !== "/dispatcher" && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
   return match?.href ?? null;

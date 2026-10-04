@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { resolveApiOrigin } from "../../lib/content-security-policy";
 import { dispatcherAccess, parseDispatcherIdentity, sessionRole } from "../../lib/dispatcher-shell";
+import { WorkspaceNotice } from "./unavailable";
 import { DispatcherFrame } from "./frame";
 import { OperationalDateProvider } from "./operational-date";
 import "./dispatcher.css";
@@ -29,15 +30,17 @@ export default async function DispatcherLayout({ children }: { children: ReactNo
   const identity = parseDispatcherIdentity(body);
   if (access === "forbidden" || identity === null) {
     return (
-      <main>
-        <h1>Dispatcher access is not available</h1>
-        <p>This workspace is limited to the Dispatcher role.</p>
+      <main className="workspace-notice-page">
+        <WorkspaceNotice
+          title="Dispatcher access is not available"
+          body="This workspace is limited to the Dispatcher role."
+        />
       </main>
     );
   }
   return (
     <OperationalDateProvider>
-      <DispatcherFrame apiOrigin={origin} displayName={identity.displayName}>
+      <DispatcherFrame displayName={identity.displayName}>
         {children}
       </DispatcherFrame>
     </OperationalDateProvider>

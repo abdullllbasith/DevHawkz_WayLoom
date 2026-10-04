@@ -11,7 +11,10 @@ import {
   type TripDetail,
 } from "../../../../lib/dispatcher-route-details";
 import { tripReadyToDispatch } from "../../../../lib/dispatcher-dispatch";
+import { StatusBadge } from "../../../status-banner";
+import { humanActionError } from "../../../../lib/status-copy";
 import { displayRouteId, exportRoutesCsv, routeColor } from "../../../../lib/dispatcher-routes";
+import { shortId } from "../../../../lib/short-id";
 
 export default function DispatcherRouteDetailPage({
   params,
@@ -27,6 +30,7 @@ export default function DispatcherRouteDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [dispatching, setDispatching] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -104,7 +108,7 @@ export default function DispatcherRouteDetailPage({
         <div className="dashboard-card" style={{ padding: "36px", textAlign: "center" }}>
           <h2 className="bottom-card-title">Route Not Found</h2>
           <p className="kpi-subtitle" style={{ margin: "8px 0 16px 0" }}>
-            The requested route/trip identifier &quot;{routeId}&quot; does not exist or has been removed.
+            The requested route/trip identifier &quot;{shortId(routeId)}&quot; does not exist or has been removed.
           </p>
           <div>
             <Link href="/dispatcher/routes" className="btn-view-route">
@@ -154,6 +158,7 @@ export default function DispatcherRouteDetailPage({
     if (trip === null || dispatching) return;
     setDispatching(true);
     setError(null);
+    setNotice(null);
     try {
       const tokenResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
       const tokenBody = tokenResponse.ok ? ((await tokenResponse.json()) as { csrfToken?: string }) : {};
@@ -166,13 +171,14 @@ export default function DispatcherRouteDetailPage({
         body: "{}",
       });
       if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: { code?: string } };
-        setError(body.error?.code ?? "dispatch_failed");
+        const body: unknown = await response.json().catch(() => null);
+        setError(humanActionError(response.status, body, "dispatch"));
         return;
       }
+      setNotice("Dispatched. The driver can now open this route. The trip status stays confirmed.");
       setReloadKey((value) => value + 1);
     } catch {
-      setError("dispatch_failed");
+      setError(humanActionError(0, null, "dispatch"));
     } finally {
       setDispatching(false);
     }
@@ -207,6 +213,7 @@ export default function DispatcherRouteDetailPage({
   return (
     <div className="routes-page-container">
       {error && <div className="dashboard-error" role="alert">{error}</div>}
+      {notice && <div className="dashboard-feedback" role="status">{notice}</div>}
 
       {/* 1. Header with back navigation & route badge */}
       <div className="routes-details-top-bar">
@@ -217,15 +224,13 @@ export default function DispatcherRouteDetailPage({
           <div className="routes-title-wrap">
             <h2 className="routes-details-heading">{routeDisplayId}</h2>
             <span className="routes-details-sub">
-              Vehicle {trip.vehicleId} • {trip.depot} Depot • Trip #{trip.tripNumber} • Operational Date {trip.operationalDate}
+              Vehicle {shortId(trip.vehicleId)} • {trip.depot} Depot • Trip #{trip.tripNumber} • Operational Date {trip.operationalDate}
             </span>
           </div>
         </div>
 
         <div className="routes-details-badge-group">
-          <span className={trip.status === "CONFIRMED" ? "status-badge-confirmed" : "status-badge-planned"}>
-            {trip.status}
-          </span>
+          <StatusBadge status={trip.status} />
           <button type="button" className="orders-export-btn" onClick={handleExportRouteCsv}>
             Export Route Sheet
           </button>
@@ -233,10 +238,12 @@ export default function DispatcherRouteDetailPage({
             stops: trip.stops,
             orderStatus: (orderId) => orders.find((order) => order.id === orderId)?.status,
           }) ? (
-            <button type="button" className="orders-export-btn" disabled={dispatching} onClick={() => void dispatchLoadedTrip()}>
-              {dispatching ? "Dispatching" : "Dispatch trip"}
+            <button type="button" className="orders-dispatch-btn" disabled={dispatching} onClick={() => void dispatchLoadedTrip()}>
+              {dispatching ? "Saving..." : "Dispatch trip"}
             </button>
-          ) : null}
+          ) : (
+            <span className="kpi-subtitle">Dispatch opens when every stop order is loaded.</span>
+          )}
         </div>
       </div>
 
@@ -260,7 +267,7 @@ export default function DispatcherRouteDetailPage({
             <div className="routes-map-chips-top">
               <div className="routes-map-chip-btn active">
                 <span className="chip-color-dot" style={{ backgroundColor: routeColor(0) }} />
-                <span>{routeDisplayId} - {trip.vehicleId}</span>
+                <span title={trip.vehicleId}>{routeDisplayId} - {shortId(trip.vehicleId)}</span>
               </div>
             </div>
 
@@ -339,7 +346,7 @@ export default function DispatcherRouteDetailPage({
                         {stop.sequence}
                       </text>
                       <text x={cx} y={cy + 22} fontSize="10" fontWeight="600" fill="#334155" textAnchor="middle">
-                        {stopOrder?.outlet ?? stop.orderId}
+                        {stopOrder?.outlet ?? shortId(stop.orderId)}
                       </text>
                     </g>
                   );
@@ -396,10 +403,10 @@ export default function DispatcherRouteDetailPage({
                           <span className="stop-seq-circle" style={{ margin: "0 auto" }}>{stop.sequence}</span>
                         </td>
                         <td>
-                          <strong>{order?.outlet ?? stop.orderId}</strong>
+                          <strong title={order?.outlet ?? stop.orderId}>{order?.outlet ?? shortId(stop.orderId)}</strong>
                           <div className="type-text">{order?.district ?? "—"}</div>
                         </td>
-                        <td>{order?.orderId ?? stop.orderId}</td>
+                        <td title={order?.orderId ?? stop.orderId}>{shortId(order?.orderId ?? stop.orderId)}</td>
                         <td>{order?.brand ?? "—"}</td>
                         <td>
                           <span className={order?.temperature === "chilled" ? "route-badge-pill" : "type-text"}>
@@ -411,9 +418,7 @@ export default function DispatcherRouteDetailPage({
                         </td>
                         <td>{stop.plannedArrival ?? "—"}</td>
                         <td>
-                          <span className={trip.status === "CONFIRMED" ? "status-badge-confirmed" : "status-badge-planned"}>
-                            {order?.status ?? trip.status}
-                          </span>
+                          <StatusBadge status={order?.status ?? trip.status} />
                         </td>
                       </tr>
                     );
@@ -436,15 +441,13 @@ export default function DispatcherRouteDetailPage({
         <div className="dashboard-card routes-details-card">
           <div className="routes-details-header">
             <h2 className="bottom-card-title">Vehicle &amp; Assignment</h2>
-            <span className={trip.status === "CONFIRMED" ? "status-badge-confirmed" : "status-badge-planned"}>
-              {trip.status}
-            </span>
+            <StatusBadge status={trip.status} />
           </div>
 
           {/* Vehicle Box */}
           <div className="route-vehicle-box">
             <div className="route-vehicle-meta">
-              <span className="route-vehicle-code">{trip.vehicleId}</span>
+              <span className="route-vehicle-code" title={trip.vehicleId}>{shortId(trip.vehicleId)}</span>
               <span className="route-vehicle-attr">Driver: —</span>
               <span className="route-vehicle-attr">Depot: {trip.depot}</span>
               <span className="route-vehicle-attr">Trip #{trip.tripNumber}</span>

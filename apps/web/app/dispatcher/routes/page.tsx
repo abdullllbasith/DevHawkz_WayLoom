@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
+import { StatusBadge, StatusBanner } from "../../status-banner";
 import { noOperationalDateMessage, selectOperationalDateMessage, useOperationalDate } from "../operational-date";
 import { readPlanningResult, type PlanningView } from "../../../lib/dispatcher-planning";
 import {
@@ -14,6 +15,7 @@ import {
   routesKpis,
   type RouteStatusTab,
 } from "../../../lib/dispatcher-routes";
+import { shortId } from "../../../lib/short-id";
 
 export default function DispatcherRoutesPage() {
   const [view, setView] = useState<PlanningView>({ operationalDate: null, trips: [], deferrals: [] });
@@ -104,9 +106,22 @@ export default function DispatcherRoutesPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (operationalDate.status === "loading") {
+    return <StatusBanner tone="loading" title="Reading the operational date" body="Routes stay hidden until a date is selected." />;
+  }
+  if (operationalDate.selected === null) {
+    return (
+      <StatusBanner
+        tone="empty"
+        title={operationalDate.status === "empty" ? noOperationalDateMessage : selectOperationalDateMessage}
+        body="Planning, routes, and dispatch use that date. Choose it in the header."
+      />
+    );
+  }
+
   return (
     <div className="routes-page-container">
-      {error && <div className="dashboard-error" role="alert">{error}</div>}
+      {error && error !== selectOperationalDateMessage && error !== noOperationalDateMessage ? <div className="dashboard-error" role="alert">{error}</div> : null}
 
       {/* 1. Top KPI Summary */}
       <section className="routes-kpi-grid" aria-label="Route Performance Metrics">
@@ -181,7 +196,7 @@ export default function DispatcherRoutesPage() {
                     aria-label={`Select ${displayRouteId(trip)}`}
                   >
                     <span className="chip-color-dot" style={{ backgroundColor: color }} />
-                    <span>{displayRouteId(trip)} - {trip.vehicleId}</span>
+                    <span title={`${displayRouteId(trip)} - ${trip.vehicleId}`}>{displayRouteId(trip)} - {shortId(trip.vehicleId)}</span>
                   </button>
                 );
               })}
@@ -267,7 +282,7 @@ export default function DispatcherRoutesPage() {
                         {stop.sequence}
                       </text>
                       <text x={cx} y={cy + 22} fontSize="10" fontWeight="600" fill="#334155" textAnchor="middle">
-                        {stopOrder?.outlet ?? stop.orderId}
+                        {stopOrder?.outlet ?? shortId(stop.orderId)}
                       </text>
                     </g>
                   );
@@ -353,7 +368,7 @@ export default function DispatcherRoutesPage() {
                         </td>
                         <td>
                           <div>
-                            <span className="vehicle-code-text">{trip.vehicleId}</span>
+                            <span className="vehicle-code-text" title={trip.vehicleId}>{shortId(trip.vehicleId)}</span>
                             <div className="type-text">—</div>
                           </div>
                         </td>
@@ -362,9 +377,7 @@ export default function DispatcherRoutesPage() {
                         <td>—</td>
                         <td>—</td>
                         <td>
-                          <span className={trip.status === "CONFIRMED" ? "status-badge-confirmed" : "status-badge-planned"}>
-                            {trip.status}
-                          </span>
+                          <StatusBadge status={trip.status} />
                         </td>
                         <td>—</td>
                         <td>
@@ -397,9 +410,7 @@ export default function DispatcherRoutesPage() {
           <div className="routes-details-header">
             <h2 className="bottom-card-title">Route Details</h2>
             {selectedTrip ? (
-              <span className={selectedTrip.status === "CONFIRMED" ? "status-badge-confirmed" : "status-badge-planned"}>
-                {selectedTrip.status}
-              </span>
+              <StatusBadge status={selectedTrip.status} />
             ) : null}
           </div>
 
@@ -408,7 +419,7 @@ export default function DispatcherRoutesPage() {
               {/* Vehicle Box */}
               <div className="route-vehicle-box">
                 <div className="route-vehicle-meta">
-                  <span className="route-vehicle-code">{selectedTrip.vehicleId}</span>
+                  <span className="route-vehicle-code" title={selectedTrip.vehicleId}>{shortId(selectedTrip.vehicleId)}</span>
                   <span className="route-vehicle-attr">Driver: —</span>
                   <span className="route-vehicle-attr">Depot: {selectedTrip.depot}</span>
                   <span className="route-vehicle-attr">Trip #{selectedTrip.tripNumber}</span>
@@ -445,7 +456,7 @@ export default function DispatcherRoutesPage() {
                         <div className="route-stop-left">
                           <span className="stop-seq-circle">{stop.sequence}</span>
                           <div>
-                            <div className="stop-outlet-title">{order?.outlet ?? stop.orderId}</div>
+                            <div className="stop-outlet-title" title={order?.outlet ?? stop.orderId}>{order?.outlet ?? shortId(stop.orderId)}</div>
                             <div className="stop-eta-sub">Planned Arrival: {stop.plannedArrival ?? "—"}</div>
                           </div>
                         </div>

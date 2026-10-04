@@ -138,6 +138,54 @@ html:has(.dispatcher-shell) body {
   background: #1e293b;
 }
 
+.workspace-notice-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: #f4f7fb;
+}
+
+.workspace-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(560px, 100%);
+  margin: 8px auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.workspace-notice-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.workspace-notice h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.workspace-notice p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
 .dispatcher-sidebar-footer {
   margin-top: 4px;
 }
@@ -663,14 +711,72 @@ html:has(.dispatcher-shell) body {
   color: #0284c7;
 }
 
-.badge-status-pending {
+.badge-status-pending,
+.badge-status-active,
+.badge-status-done,
+.badge-status-warn {
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.badge-status-pending svg,
+.badge-status-active svg,
+.badge-status-done svg,
+.badge-status-warn svg {
+  flex-shrink: 0;
+}
+
+.badge-status-pending {
   background: #eff6ff;
   color: #2563eb;
-  display: inline-block;
+}
+
+.badge-status-active {
+  background: #e0e7ff;
+  color: #1e3a8a;
+}
+
+.badge-status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-status-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+button.dispatcher-nav-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+}
+
+.dispatcher-nav-link.quiet,
+.dispatcher-nav-link.quiet:hover,
+.dispatcher-nav-link.quiet:disabled {
+  opacity: 0.45;
+  color: #94a3b8;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.dispatcher-help-btn:disabled,
+.dispatcher-icon-btn:disabled,
+.dispatcher-search-input:disabled {
+  cursor: not-allowed;
+}
+
+.dispatcher-help-btn:disabled:hover {
+  background: #0f172a;
 }
 
 .empty-table-cell {
@@ -683,6 +789,50 @@ html:has(.dispatcher-shell) body {
 .ai-assistant-card {
   display: flex;
   flex-direction: column;
+  height: 640px;
+  min-height: 640px;
+  max-height: 640px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ai-plan-panel,
+.ai-chat-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ai-plan-panel {
+  overflow: auto;
+}
+
+.ai-chat-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding-right: 4px;
+}
+
+.ai-chat-line {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #334155;
+  overflow-wrap: anywhere;
+}
+
+.ai-chat-form {
+  flex: none;
+}
+
+.ai-chat-form .ai-generate-btn {
+  margin-top: 10px;
 }
 
 .ai-assistant-title {
@@ -1183,6 +1333,30 @@ html:has(.dispatcher-shell) body {
   background: #f8fafc;
 }
 
+.orders-dispatch-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  background: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.orders-dispatch-btn:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.orders-dispatch-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Middle Layout */
 .orders-middle-grid {
   display: grid;
@@ -1204,6 +1378,46 @@ html:has(.dispatcher-shell) body {
 .selected-orders-card {
   display: flex;
   flex-direction: column;
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-title-row .selected-orders-title,
+.panel-title-row .insights-card-title,
+.panel-title-row .breakdown-card-title {
+  margin: 0;
+}
+
+.panel-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.panel-icon.tone-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.panel-icon.tone-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.panel-icon.tone-amber {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .selected-orders-title {
