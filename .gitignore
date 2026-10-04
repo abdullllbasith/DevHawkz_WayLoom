@@ -35,6 +35,8 @@ temp/
 # Local database files. Competition import inputs under data/ stay visible to Git.
 *.db
 *.sqlite
+*.dump
+backups/
 
 # Generated Prisma Client. `prisma generate` recreates it during the API build.
 apps/api/src/generated/
