@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { prismaAiAudit } from "./ai/audit-store.js";
 import { coreRoutes } from "./api/core-routes.js";
 import { prismaCore } from "./api/prisma-core.js";
 import { createApp } from "./app.js";
@@ -35,7 +36,12 @@ function start(config: ApiConfig): void {
       httpSecurity: config.httpSecurity,
       audit: prismaSecurityAudit(prisma),
       readiness: () => probeDatabase(() => prisma.$queryRaw`SELECT 1`),
-      businessRoutes: coreRoutes({ ...prismaCore(prisma), now: () => new Date() }),
+      businessRoutes: coreRoutes({
+        ...prismaCore(prisma),
+        now: () => new Date(),
+        aiEnv: process.env,
+        aiAudit: prismaAiAudit(prisma),
+      }),
     }),
   );
   let closing = false;

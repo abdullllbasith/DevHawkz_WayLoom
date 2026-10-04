@@ -62,6 +62,21 @@ export function planningCounts(view: PlanningView) {
   };
 }
 
+export function readPlanningExplanation(value: unknown): { text: string; advisory: boolean } | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (record.allocationChanged !== false) return null;
+  if (record.ok === true && typeof record.advisory === "object" && record.advisory !== null) {
+    const text = (record.advisory as Record<string, unknown>).text;
+    if (typeof text !== "string" || text.length === 0) return null;
+    return { text, advisory: true };
+  }
+  if (record.ok === false && typeof record.fallbackText === "string" && record.fallbackText.length > 0) {
+    return { text: record.fallbackText, advisory: false };
+  }
+  return null;
+}
+
 export function preserveDeferralReason(reason: string): string {
   return allowedReasons.some((code) => code === reason) ? reason : reason;
 }

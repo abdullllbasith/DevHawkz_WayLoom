@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
 
+import { memoryAudit } from "../ai/audit.js";
 import { coreRoutes, type CoreDependencies, type TripScope } from "./core-routes.js";
 import { createApp } from "../app.js";
 import type { DeferralStore, StoredDeferral } from "../domain/deferral.js";
@@ -316,6 +317,79 @@ test("sync batch is idempotent and keeps delivery authorization", async () => {
   }
 });
 
+test("a dispatcher can explain the stored plan without changing it", async () => {
+  const sessions = memorySessions();
+  const world = memoryCore();
+  const audit = memoryAudit();
+  world.deferralRows[0]!.reason = "VAN_ACCESS";
+  world.tripRows[0]!.stops.push(stop("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb9", deliveryOrder));
+  const before = JSON.stringify(world.tripRows);
+  const server = await listen(
+    createApp({
+      nodeEnv: "test",
+      log: silentLog(),
+      users: directory([dispatcher, loader]),
+      sessions,
+      now: () => now,
+      assignedOutletIds: async () => [],
+      businessRoutes: coreRoutes({
+        ...world,
+        aiEnv: { AI_ENABLED: "true", AI_PROVIDER: "deterministic", AI_PROVIDER_API_KEY: "server-only-key" },
+        aiAudit: audit.writer,
+      }),
+    }),
+  );
+  const dispatcherCookie = await cookieFor(dispatcher, sessions);
+  const loaderCookie = await cookieFor(loader, sessions);
+  try {
+    const denied = await send(server, "/api/planning/2026-06-02/explanation", loaderCookie, {});
+    assert.equal(denied.status, 403);
+    const fabricated = await send(server, "/api/planning/2026-06-02/explanation", dispatcherCookie, { text: "Allocated elsewhere" });
+    assert.equal(fabricated.status, 400);
+    const explained = await send(server, "/api/planning/2026-06-02/explanation", dispatcherCookie, {});
+    assert.equal(explained.status, 200);
+    const body = (await explained.json()) as { ok: boolean; advisory?: { text: string }; allocationChanged: boolean };
+    assert.equal(body.ok, true);
+    assert.equal(body.allocationChanged, false);
+    assert.match(body.advisory?.text ?? "", /Planning 2026-06-02: served 1, deferred 1/);
+    assert.equal(JSON.stringify(body).includes("server-only-key"), false);
+    assert.equal(JSON.stringify(world.tripRows), before);
+    assert.equal(audit.records[0]?.providerId, "deterministic");
+    assert.equal(audit.records[0]?.humanDecision, "not_recorded");
+
+    const capacity = memoryCore();
+    const capacityServer = await listen(
+      createApp({
+        nodeEnv: "test",
+        log: silentLog(),
+        users: directory([dispatcher]),
+        sessions,
+        now: () => now,
+        assignedOutletIds: async () => [],
+        businessRoutes: coreRoutes({
+          ...capacity,
+          aiEnv: { AI_ENABLED: "true", AI_PROVIDER: "openrouter", AI_PROVIDER_API_KEY: "server-only-key" },
+          aiAudit: memoryAudit().writer,
+        }),
+      }),
+    );
+    try {
+      const fallback = await send(capacityServer, "/api/planning/2026-06-02/explanation", dispatcherCookie, {});
+      const fallbackBody = (await fallback.json()) as { ok: boolean; code: string; fallbackText: string; allocationChanged: boolean };
+      assert.equal(fallbackBody.ok, false);
+      assert.equal(fallbackBody.code, "insufficient_context");
+      assert.equal(fallbackBody.allocationChanged, false);
+      assert.match(fallbackBody.fallbackText, /LOAD-1 NO_CAPACITY/);
+      assert.equal(fallbackBody.fallbackText.includes("weight_capacity"), false);
+      assert.equal(JSON.stringify(fallbackBody).includes("server-only-key"), false);
+    } finally {
+      await close(capacityServer);
+    }
+  } finally {
+    await close(server);
+  }
+});
+
 function orderBody(): Record<string, unknown> {
   return {
     deliveryId: "ORD-100",
@@ -328,7 +402,7 @@ function orderBody(): Record<string, unknown> {
   };
 }
 
-function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: MemoryTrip[] } {
+function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: MemoryTrip[]; deferralRows: StoredDeferral[] } {
   const outlets = new Map<string, OrderOutlet>([
     [outletA, { id: outletA, outletCode: "OUT001", brand: "Fresh", district: "Colombo", depot: "Peliyagoda" }],
     [outletB, { id: outletB, outletCode: "OUT002", brand: "Fresh", district: "Colombo", depot: "Peliyagoda" }],
@@ -834,7 +908,7 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     }
   }
 
-  return Object.assign(core, { orderRows: state.orders, tripRows: state.trips });
+  return Object.assign(core, { orderRows: state.orders, tripRows: state.trips, deferralRows: state.deferrals });
 }
 
 type MemoryTrip = TripScope;

@@ -66,6 +66,7 @@ These contracts are the request and response allowlists for the core API. They d
 | `POST /api/orders/:id/confirm` | none | order fields below | `confirmOrder` |
 | `POST /api/planning/run` | `operationalDate` | `operationalDate`, trips, deferrals | planning boundary, not a client allocation |
 | `GET /api/planning/:date` | path date | same planning result | planning read |
+| `POST /api/planning/:date/explanation` | none | advisory text or fallback; `allocationChanged` is false | `explainPlanning` on the stored result |
 | `GET /api/trips/:id` | path id | trip and stops below | trip read |
 | `POST /api/trips/:id/confirm` | none | same trip | `confirmTrip` |
 | `GET /api/deferrals` | optional `orderId`, `reason` | deferral fields below | deferral read |

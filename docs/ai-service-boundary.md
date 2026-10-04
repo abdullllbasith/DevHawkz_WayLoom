@@ -22,4 +22,4 @@ Deterministic domain and planning code remains authoritative for feasibility, ha
 
 The provider, when configured, is called only after the deterministic result exists. Provider failure returns a bounded fallback built from those facts. It does not change them.
 
-No AI route is part of this boundary. Existing APIs stay the only way to change operational state.
+A Dispatcher may request an explanation of a stored planning result. That route does not change operational state. Existing lifecycle APIs stay the only way to change it.

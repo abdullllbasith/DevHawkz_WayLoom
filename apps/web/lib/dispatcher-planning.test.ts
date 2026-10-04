@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { filterTrips, planningCounts, preserveDeferralReason, readPlanningResult } from "./dispatcher-planning.ts";
+import { filterTrips, planningCounts, preserveDeferralReason, readPlanningExplanation, readPlanningResult } from "./dispatcher-planning.ts";
 
 test("planning result keeps trip identity and does not invent fuel or distance", () => {
   const view = readPlanningResult({
@@ -18,4 +18,24 @@ test("planning result keeps trip identity and does not invent fuel or distance",
   assert.equal(counts.onTime, "—");
   assert.equal(filterTrips(view.trips, "veh001").length, 1);
   assert.equal(preserveDeferralReason("NO_CAPACITY"), "NO_CAPACITY");
+});
+
+test("a planning explanation is advisory text or a stored fallback", () => {
+  const advisory = readPlanningExplanation({
+    ok: true,
+    allocationChanged: false,
+    advisory: { text: "Planning 2026-06-02: served 1, deferred 1.", providerKey: "hidden" },
+  });
+  assert.equal(advisory?.text, "Planning 2026-06-02: served 1, deferred 1.");
+  assert.equal(advisory?.advisory, true);
+  assert.equal(JSON.stringify(advisory).includes("hidden"), false);
+  const fallback = readPlanningExplanation({
+    ok: false,
+    code: "unavailable",
+    fallbackText: "Planning 2026-06-02: served 1. ORD-100 NO_CAPACITY.",
+    allocationChanged: false,
+  });
+  assert.equal(fallback?.advisory, false);
+  assert.match(fallback?.text ?? "", /NO_CAPACITY/);
+  assert.equal(readPlanningExplanation({ ok: true, allocationChanged: true, advisory: { text: "changed" } }), null);
 });

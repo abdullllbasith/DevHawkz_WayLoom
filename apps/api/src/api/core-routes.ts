@@ -38,6 +38,10 @@ import { confirmOrder, createOrder, getOrder, submitOrder } from "../domain/orde
 import type { OrderActor, OrderStatusName, OrderStore, StoredOrder } from "../domain/order.js";
 import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
+import type { AiAuditWriter } from "../ai/audit.js";
+import { explainPlanning } from "../ai/planning-explanation.js";
+import { loadAiSettings, selectAiProvider } from "../ai/provider.js";
+import { planningResultFromStored } from "../ai/stored-planning.js";
 import type { PlanningContextLoadResult } from "../domain/planning-context.js";
 import { executePlanningRun } from "../domain/planning-run.js";
 import { emitDiagnostic, planningDiagnostic, syncDiagnostic } from "../observability/diagnostics.js";
@@ -86,6 +90,8 @@ export type CoreDependencies = {
   deliveryIdsForOrder(orderId: string): Promise<string[]>;
   listExceptions(): Promise<StoredException[]>;
   loadPlanningRunContext(operationalDate: string): Promise<PlanningContextLoadResult>;
+  aiEnv?: Record<string, string | undefined>;
+  aiAudit?: AiAuditWriter;
 };
 
 export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
@@ -107,6 +113,8 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
     route("POST", "/api/planning/run", ["DISPATCHER"], (context, response, request) =>
       runPlanning(deps, context, response, request),
     ),
+    route("POST", "/api/planning/:date/explanation", ["DISPATCHER"], (context, response, request) =>
+      explainStoredPlanning(deps, context, response, request), /^\/api\/planning\/[^/]+\/explanation$/),
     route("GET", "/api/planning/:date", ["DISPATCHER"], (_context, response, request) =>
       readPlanning(deps, response, request), /^\/api\/planning\/[^/]+$/),
     route("POST", "/api/trips/:id/confirm", ["DISPATCHER"], (context, response, request) =>
@@ -331,6 +339,58 @@ async function readPlanning(deps: CoreDependencies, response: ServerResponse, re
     return;
   }
   sendJson(response, 200, await planningResult(deps, parsed.value));
+}
+
+async function explainStoredPlanning(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const date = pathValue(request, /^\/api\/planning\/([^/]+)\/explanation$/);
+  const parsedDate = parsePlanningDate(date === null ? undefined : decodeURIComponent(date));
+  const body = await readJson(request);
+  if (!parsedDate.ok || body === "invalid" || !parseEmptyBody(body)) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const operationalDate = parsedDate.value;
+  const [trips, deferrals] = await Promise.all([
+    deps.listTripsOnDate(operationalDate),
+    deps.listDeferrals({ orderDate: operationalDate }),
+  ]);
+  const deliveryIdByOrderId = new Map<string, string>();
+  for (const deferral of deferrals) {
+    const order = await deps.orders.findById(deferral.orderId);
+    if (order !== null) {
+      deliveryIdByOrderId.set(order.id, order.deliveryId);
+    }
+  }
+  const stored = planningResultFromStored({ operationalDate, trips, deferrals, deliveryIdByOrderId });
+  if (!stored.ok) {
+    sendJson(response, 200, {
+      ok: false,
+      code: "insufficient_context",
+      fallbackText: stored.summary,
+      allocationChanged: false,
+    });
+    return;
+  }
+  const settings = loadAiSettings(deps.aiEnv ?? {});
+  const explained = await explainPlanning({
+    result: stored.result,
+    capturedAt: deps.now().toISOString(),
+    provider: selectAiProvider(settings),
+    settings,
+    actorUserId: context.userId,
+    occurredAt: deps.now(),
+    audit: deps.aiAudit ?? { append: () => Promise.reject(new Error("audit unavailable")) },
+  });
+  sendJson(response, 200, explained);
+}
+
+function parseEmptyBody(value: unknown): boolean {
+  return value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0;
 }
 
 async function planningResult(deps: CoreDependencies, operationalDate: string) {

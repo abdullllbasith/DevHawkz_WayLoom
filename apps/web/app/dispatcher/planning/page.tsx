@@ -3,9 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+import { aiFallbackMessage } from "../../../lib/ai-fallback";
 import { confirmPlanOnServer } from "../../../lib/dispatcher-confirmation";
 import { latestOrderDate, readOrderList, type DispatcherOrder } from "../../../lib/dispatcher-orders";
-import { filterTrips, planningCounts, readPlanningResult, type PlanTrip, type PlanningView } from "../../../lib/dispatcher-planning";
+import { filterTrips, planningCounts, readPlanningExplanation, readPlanningResult, type PlanTrip, type PlanningView } from "../../../lib/dispatcher-planning";
 
 const emptyView: PlanningView = { operationalDate: null, trips: [], deferrals: [] };
 
@@ -18,6 +19,8 @@ export default function DispatcherPlanningPage() {
   const [selected, setSelected] = useState<PlanTrip | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"run" | "confirm" | null>(null);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explainBusy, setExplainBusy] = useState(false);
 
   async function load() {
     const ordersResponse = await fetch("/api/orders", { cache: "no-store" });
@@ -67,6 +70,7 @@ export default function DispatcherPlanningPage() {
     if (view.operationalDate === null || busy !== null) return;
     setBusy("run");
     setError(null);
+    setExplanation(null);
     try {
       const token = await csrfToken();
       const response = await fetch("/api/planning/run", {
@@ -83,6 +87,27 @@ export default function DispatcherPlanningPage() {
       setError("Planning could not be reached.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function explainPlan() {
+    if (view.operationalDate === null || busy !== null || explainBusy) return;
+    setExplainBusy(true);
+    setError(null);
+    try {
+      const token = await csrfToken();
+      const response = await fetch(`/api/planning/${encodeURIComponent(view.operationalDate)}/explanation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { "x-wayloom-csrf": token } : {}) },
+        body: JSON.stringify({}),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const read = readPlanningExplanation(payload);
+      setExplanation(response.ok && read !== null ? read.text : aiFallbackMessage("unavailable"));
+    } catch {
+      setExplanation(aiFallbackMessage("unavailable"));
+    } finally {
+      setExplainBusy(false);
     }
   }
 
@@ -210,7 +235,11 @@ export default function DispatcherPlanningPage() {
         </div>
         <div className="dashboard-card">
           <h3 className="bottom-card-title">AI reasoning</h3>
-          <p className="kpi-subtitle">No AI explanation is included in the planning result.</p>
+          <p className="kpi-subtitle">Advisory only. The stored allocation and deferrals stay unchanged.</p>
+          <button type="button" className="btn-regenerate-plan" onClick={() => void explainPlan()} disabled={view.operationalDate === null || busy !== null || explainBusy}>
+            {explainBusy ? "Requesting explanation..." : "Explain this plan"}
+          </button>
+          <p className="kpi-subtitle">{explanation ?? "No explanation requested."}</p>
         </div>
       </section>
 
