@@ -2,6 +2,7 @@ import type { PlanningResult } from "@wayloom/planning";
 
 import { AI_CONTRACT_VERSION, parseAiInput, type PlanningExplanationInput } from "./input.js";
 import { requestAdvisory, type AiProvider, type AiSettings } from "./provider.js";
+import { validateAdvisory } from "./boundary.js";
 import type { AiAdvisory } from "./output.js";
 
 export type PlanningExplanation =
@@ -46,16 +47,11 @@ export async function explainPlanning(input: {
   if (!advisory.ok) {
     return { ok: false, code: advisory.code === "invalid_output" ? "invalid_output" : "unavailable", fallbackText: planningFallback(parsed.value), allocationChanged: false };
   }
-  if (!matchesPlanning(parsed.value, advisory.advisory)) {
+  const checked = validateAdvisory(parsed.value, advisory.advisory, input.provider.id);
+  if (!checked.ok) {
     return { ok: false, code: "invalid_output", fallbackText: planningFallback(parsed.value), allocationChanged: false };
   }
-  return { ok: true, advisory: advisory.advisory, allocationChanged: false };
-}
-
-function matchesPlanning(input: PlanningExplanationInput, advisory: AiAdvisory): boolean {
-  const orderIds = new Set([...input.served, ...input.deferred].map((item) => item.orderId));
-  const facts = new Set<string>(input.deferred.flatMap((item) => item.deferralReason === null ? [item.constraint] : [item.constraint, item.deferralReason]));
-  return advisory.factRefs.every((id) => orderIds.has(id)) && advisory.sourceFacts.every((fact) => facts.has(fact));
+  return { ok: true, advisory: checked.advisory, allocationChanged: false };
 }
 
 function planningFallback(input: PlanningExplanationInput): string {

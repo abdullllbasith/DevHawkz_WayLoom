@@ -1,4 +1,5 @@
 import { AI_CONTRACT_VERSION, parseAiInput, type ExceptionExplanationInput } from "./input.js";
+import { validateAdvisory } from "./boundary.js";
 import type { AiAdvisory } from "./output.js";
 import { requestAdvisory, type AiProvider, type AiSettings } from "./provider.js";
 
@@ -27,7 +28,8 @@ export async function explainException(input: {
     return { ok: false, code: "insufficient_context", fallbackText: "No exception facts were supplied.", exceptionChanged: false };
   }
   const advisory = await requestAdvisory(parsed.value, input.provider, input.settings);
-  if (!advisory.ok || !matchesException(parsed.value, advisory.advisory) || personalPattern.test(advisory.advisory.text)) {
+  const checked = advisory.ok ? validateAdvisory(parsed.value, advisory.advisory, input.provider.id) : null;
+  if (!advisory.ok || checked === null || !checked.ok || personalPattern.test(checked.advisory.text)) {
     return {
       ok: false,
       code: advisory.ok ? "invalid_output" : "unavailable",
@@ -35,11 +37,7 @@ export async function explainException(input: {
       exceptionChanged: false,
     };
   }
-  return { ok: true, advisory: advisory.advisory, exceptionChanged: false };
-}
-
-function matchesException(input: ExceptionExplanationInput, advisory: AiAdvisory): boolean {
-  return advisory.factRefs.every((id) => id === input.exceptionId) && advisory.sourceFacts.every((fact) => fact === input.category);
+  return { ok: true, advisory: checked.advisory, exceptionChanged: false };
 }
 
 function exceptionFallback(input: ExceptionExplanationInput): string {
