@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "npm run build && node --env-file-if-exists=../../.env dist/server.js",
     "build": "prisma generate && tsc -p tsconfig.json --pretty false",
+    "vercel-build": "prisma migrate deploy && npm run build",
+    "prestart": "prisma migrate deploy",
     "start": "node --env-file-if-exists=../../.env dist/server.js",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",

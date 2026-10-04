@@ -20,6 +20,8 @@ npm run start --workspace @wayloom/api
 
 The process reads the repository root `.env` when that file exists. `NODE_ENV` must be `development`, `test`, or `production`.
 
+The production `start` lifecycle runs `prisma migrate deploy` before opening the HTTP listener. The package also exposes a `vercel-build` lifecycle that applies migrations before compiling when the API is deployed as a Vercel project. The deployment must still provide a production `DATABASE_URL`; migrations do not create or seed production users. Provision real production accounts separately, and never use the development seed password in production.
+
 In development and test, `API_HOST` defaults to `127.0.0.1` and `API_PORT` defaults to `4000`. In production both values are required.
 
 `DATABASE_URL` is required. Development must use the local `wayloom_development` database. Test must use `127.0.0.1` and `wayloom_test`. Production must set its own database URL and cannot use those two databases or a placeholder password. The URL is not returned by the API.
