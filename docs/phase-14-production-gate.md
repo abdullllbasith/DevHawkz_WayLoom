@@ -2,46 +2,38 @@
 
 **Gate result:** PASS
 
-The verifiable checks below passed. Items marked `NOT VERIFIABLE IN CURRENT ENVIRONMENT` are not counted as passed.
+Verifiable checks in this environment passed. Items marked `NOT VERIFIABLE IN CURRENT ENVIRONMENT` are listed below and are not treated as completed verification.
 
 ## Environment
 
-Local Docker Compose on `127.0.0.1`: PostgreSQL `18.6`, the planning process, and the web container. The API is the host process from `npm run gate:start-api-local` with `NODE_ENV=test` and database `wayloom_test`. This is not a public TLS deployment. Build checks passed on this tree after `8787e05`.
+Local Compose on `127.0.0.1`: PostgreSQL `wayloom_test`, the API process from `gate:start-api-local`, the rebuilt planning container, and the existing web container. Application commit before this report: `8787e05`. No public hostname and no TLS listener are configured.
 
 ## Services
 
-`GET /health` returned `{"status":"ok"}` for the API and the planning process. `GET /ready` returned `{"status":"ready","database":"ok"}` for the API and `{"status":"ready"}` for the planning process. The planning image was rebuilt from the current source before that probe.
+`GET /health` returned `{"status":"ok"}` for the API and the planning process. `GET /ready` returned `{"status":"ready","database":"ok"}` for the API and `{"status":"ready"}` for the planning process. The API check does not include AI and does not run planning.
 
 ## Four-role workflow
 
-`lifecycle.test.ts` passed inside the API suite. It walks one order through the four roles with AI disabled. A second live order was not created. The seeded order remains the receipt-confirmed journey from Phase 10, and `wayloom_test` was not reset.
+`lifecycle.test.ts` passed inside the API suite: one order moves through store, dispatcher, loader, and driver without AI. A second live replay was not started. The seeded order is already receipt confirmed, and this gate did not reset `wayloom_test`.
 
-## Planning
+## Planning, offline, and security
 
-`@wayloom/planning` tests: 42 passed, including cutoff equality, capacity deferral, and the hard constraints. The API still runs that engine in process.
-
-## Offline
-
-Web tests: 80 passed, including pending delivery events, replay as already applied, and rejection of a session secret.
-
-## Security
-
-API tests: 178 passed, including session cookies, CSRF, RBAC, object authorization, and secret redaction. Production cookies are `Secure` only when `NODE_ENV` is `production`.
-
-`NOT VERIFIABLE IN CURRENT ENVIRONMENT`: a public HTTPS listener. Compose publishes HTTP on `127.0.0.1`. TLS termination remains outside the application, as recorded in `docs/production-https.md`.
+Planning tests: 42 passed, including cutoff equality and hard constraints. Web tests: 80 passed, including offline replay and rejection of a session secret. API tests: 178 passed, including CSRF, object authorization, production cookies, and configuration redaction.
 
 ## Backup and restore
 
-`wayloom_test` was dumped with `pg_dump` custom format and checked with `pg_restore --list` (110322 bytes). The dump restored into temporary `wayloom_restore` with 14 migrations, 4 users, 120 outlets, and 2 orders. That database was dropped. `wayloom_development` and `wayloom_test` remained. The API was not pointed at the temporary database, because test configuration accepts only `wayloom_test`.
+A `wayloom_test` custom dump was checked with `pg_restore --list` (110322 bytes). Restore into `wayloom_restore` read 14 migrations, 4 users, 120 outlets, and 2 orders. That temporary database was dropped. `wayloom_development` and `wayloom_test` remained. The API was not pointed at the temporary database.
 
 ## README
 
-The root README describes the local gate setup, the in-process planner, and `GET /health` versus `GET /ready`.
+The root README matches the local commands, the deterministic planner, and `GET /health` versus `GET /ready`.
+
+## NOT VERIFIABLE IN CURRENT ENVIRONMENT
+
+- Public HTTPS. Local ports are HTTP. Production `Secure` cookies and HSTS are covered by tests when `NODE_ENV=production` and `WEB_HTTPS=true`.
+- A fresh live four-role browser walkthrough on a new order.
+- An API process bound to the temporary restore database.
 
 ## Checks
 
-API 178 passed. Web 80 passed. Planning 42 passed. Typecheck, lint, and build passed.
-
-## Limitations
-
-No retention period is configured. One local restore is not a disaster-recovery guarantee. AI stays off unless explicitly enabled and is not part of readiness.
+API 178, web 80, planning 42, typecheck, lint, and build passed. Phase 15 was not started.
