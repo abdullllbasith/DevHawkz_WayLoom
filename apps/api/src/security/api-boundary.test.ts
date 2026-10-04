@@ -31,6 +31,7 @@ const storeManager = user("44444444-4444-4444-8444-444444444444", "seed.store-ma
 test("public and session routes stay explicit", () => {
   assert.deepEqual(publicRoutes.map((route) => `${route.method} ${route.path}`), [
     "GET /health",
+    "GET /ready",
     "POST /api/auth/login",
   ]);
   assert.deepEqual(sessionRoutes.map((route) => `${route.method} ${route.path}`), [

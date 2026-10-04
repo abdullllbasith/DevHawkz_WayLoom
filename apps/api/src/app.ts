@@ -20,6 +20,7 @@ import {
 } from "./security/http-security.js";
 import { clientAddress, createLoginRateLimiter, type LoginRateLimiter } from "./security/login-rate-limit.js";
 import { invalidateSession, readSessionToken, resolveAuthenticatedSession, type SessionStore } from "./security/session.js";
+import { readinessReport, type DependencyState } from "./readiness.js";
 
 export type AppOptions = {
   nodeEnv: NodeEnvironment;
@@ -32,6 +33,7 @@ export type AppOptions = {
   loginRateLimit?: LoginRateLimiter;
   httpSecurity?: HttpSecurityConfig;
   audit?: SecurityAuditWriter;
+  readiness?: () => Promise<DependencyState>;
 };
 
 export function createApp(options: AppOptions) {
@@ -95,6 +97,16 @@ export function createApp(options: AppOptions) {
           return;
         }
         sendJson(response, 200, { status: "ok" });
+        return;
+      }
+      if (pathname === "/ready") {
+        if (request.method !== "GET") {
+          sendError(response, 405, "method_not_allowed", "Method not allowed.");
+          return;
+        }
+        const database = options.readiness === undefined ? "unavailable" : await options.readiness();
+        const report = readinessReport(database);
+        sendJson(response, report.status === "ready" ? 200 : 503, report);
         return;
       }
       if (pathname === "/api/auth/login") {

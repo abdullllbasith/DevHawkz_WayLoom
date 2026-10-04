@@ -10,6 +10,7 @@ import { readSessionToken, resolveAuthenticatedSession, type SessionStore } from
 
 export const publicRoutes = [
   { method: "GET", path: "/health" },
+  { method: "GET", path: "/ready" },
   { method: "POST", path: "/api/auth/login" },
 ] as const;
 

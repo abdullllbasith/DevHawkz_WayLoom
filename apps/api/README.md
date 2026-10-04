@@ -26,7 +26,7 @@ In development and test, `API_HOST` defaults to `127.0.0.1` and `API_PORT` defau
 
 `POST /api/auth/login` limits failed attempts in this process. `LOGIN_RATE_LIMIT_MAX` is the number of failures and `LOGIN_RATE_LIMIT_WINDOW_SECONDS` is the window in seconds. Development and test use 20 failures and 900 seconds when both are omitted. Production must set both. The limit uses the socket address and the login identifier. It does not read forwarded IP headers, and it is not shared across API processes.
 
-`GET /health` reports that this process is up. It does not check PostgreSQL or the planning service. A readiness endpoint is not exposed until those dependencies exist.
+`GET /health` reports that this process is up. It does not check PostgreSQL, the planning process, or AI. `GET /ready` checks PostgreSQL with `SELECT 1` and returns 503 when that check fails. It does not run planning, call the planning process, or check AI. See `docs/production-health.md`.
 
 The API allows credentialed browser calls only from `WEB_ORIGIN`. Development and test use `http://127.0.0.1:3000` when it is omitted. Production omits CORS headers until `WEB_ORIGIN` is an https origin, and that origin cannot be a local address. The request `Origin` is never copied into the response. Allowed methods are `GET` and `POST`. Allowed request headers are `content-type` and `x-wayloom-csrf`. A matching preflight returns `204` and does not run login, CSRF, or a business route. `WEB_HTTPS=true` adds HSTS only in production, without `includeSubDomains` or `preload`. `/api` responses use `Cache-Control: no-store`. The planning service is not a browser client and has no CORS policy.
 

@@ -74,7 +74,7 @@ npm test --workspace @wayloom/web
 npm test --workspace @wayloom/planning
 ```
 
-Build the API before its tests. `GET /health` on the API reports that the API process is up. It does not check PostgreSQL, planning, or AI. `npm run build` compiles the API and creates the frontend production build. It does not start the planning service.
+Build the API before its tests. `GET /health` reports that the API process is up. `GET /ready` checks PostgreSQL and does not check AI or run planning. See `docs/production-health.md`. `npm run build` compiles the API and creates the frontend production build. It does not start the planning service.
 
 ## Git
 

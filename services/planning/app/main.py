@@ -101,6 +101,15 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     @application.api_route(
+        "/ready",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    )
+    def ready(request: Request) -> dict[str, str]:
+        if request.method != "GET":
+            raise HTTPException(status_code=405, detail="Method not allowed.")
+        return {"status": "ready"}
+
+    @application.api_route(
         "/{full_path:path}",
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
         include_in_schema=False,

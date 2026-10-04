@@ -25,7 +25,7 @@ The process reads the repository root `.env` when that file exists. Existing env
 
 In development and test, `PLANNING_HOST` defaults to `127.0.0.1` and `PLANNING_PORT` defaults to `8000`. In production both values are required. Development reloads code. Production does not.
 
-`PLANNING_HOST` and `PLANNING_PORT` are this process's bind address. They are not an approved integration URL. `GET /health` reports that this process is up. It does not check PostgreSQL, the Node.js API, planning algorithms, or AI.
+`PLANNING_HOST` and `PLANNING_PORT` are this process's bind address. They are not an approved integration URL. `GET /health` reports that this process is up. `GET /ready` reports that this process started with valid configuration. Neither check reads PostgreSQL, calls the Node.js API, runs a planning operation, or checks AI.
 
 ## Errors
 
