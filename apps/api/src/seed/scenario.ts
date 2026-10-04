@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from "../security/password.js";
 export const SEED_PASSWORD = "wayloom-dev-only";
 export const SEED_OUTLET_ID = "OUT001";
 export const SEED_VEHICLE_ID = "VEH001";
+export const SEED_TRIP_VEHICLE_ID = "VEH035";
 export const SEED_ORDER_DATE = "2026-06-02";
 export const SEED_DELIVERY_ID = "SEED-2026-06-02-OUT001";
 export const SEED_SUBMITTED_AT = "2026-06-01T08:00:00.000Z";

@@ -11,6 +11,7 @@ import {
   seedOrder,
   seedOrderDate,
   SEED_OUTLET_ID,
+  SEED_TRIP_VEHICLE_ID,
   SEED_VEHICLE_ID,
   seedPasswordMatches,
   seedUsers,
@@ -79,27 +80,36 @@ try {
       usersUnchanged += 1;
     }
 
-    const vehicle = await transaction.vehicle.findUnique({
-      where: { vehicleId: SEED_VEHICLE_ID },
-    });
-    if (!vehicle) {
-      throw new Error(`Competition vehicle ${SEED_VEHICLE_ID} is not imported.`);
-    }
     const driver = seedUsers.find((user) => user.role === "DRIVER");
     if (!driver) {
       throw new Error("Seed driver is missing.");
     }
     let driverAssignment = "unchanged";
-    if (vehicle.driverUserId === null) {
-      await transaction.vehicle.update({
-        where: { id: vehicle.id },
-        data: { driverUserId: driver.id },
+    let vehicle: { depot: string } | null = null;
+    for (const vehicleId of [SEED_VEHICLE_ID, SEED_TRIP_VEHICLE_ID]) {
+      const found = await transaction.vehicle.findUnique({
+        where: { vehicleId },
       });
-      driverAssignment = "assigned";
-    } else if (vehicle.driverUserId !== driver.id) {
-      throw new Error(
-        `Vehicle ${SEED_VEHICLE_ID} already has a different driver. No records were written.`,
-      );
+      if (!found) {
+        throw new Error(`Competition vehicle ${vehicleId} is not imported.`);
+      }
+      if (vehicleId === SEED_VEHICLE_ID) {
+        vehicle = found;
+      }
+      if (found.driverUserId === null) {
+        await transaction.vehicle.update({
+          where: { id: found.id },
+          data: { driverUserId: driver.id },
+        });
+        driverAssignment = "assigned";
+      } else if (found.driverUserId !== driver.id) {
+        throw new Error(
+          `Vehicle ${vehicleId} already has a different driver. No records were written.`,
+        );
+      }
+    }
+    if (!vehicle) {
+      throw new Error(`Competition vehicle ${SEED_VEHICLE_ID} is not imported.`);
     }
 
     const outlet = await transaction.outlet.findUnique({
