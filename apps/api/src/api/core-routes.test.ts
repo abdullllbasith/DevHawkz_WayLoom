@@ -375,6 +375,17 @@ test("a dispatcher can explain the stored plan without changing it", async () =>
     assert.equal(JSON.stringify(world.tripRows), before);
     assert.equal(audit.records[0]?.providerId, "deterministic");
     assert.equal(audit.records[0]?.humanDecision, "not_recorded");
+    const chatDenied = await send(server, "/api/planning/2026-06-02/chat", loaderCookie, { question: "Why was this deferred?" });
+    assert.equal(chatDenied.status, 403);
+    const chatExtra = await send(server, "/api/planning/2026-06-02/chat", dispatcherCookie, { question: "Why was this deferred?", allocation: true });
+    assert.equal(chatExtra.status, 400);
+    const chat = await send(server, "/api/planning/2026-06-02/chat", dispatcherCookie, { question: "Why was this deferred?" });
+    assert.equal(chat.status, 200);
+    const chatBody = (await chat.json()) as { ok: boolean; allocationChanged: boolean };
+    assert.equal(chatBody.ok, true);
+    assert.equal(chatBody.allocationChanged, false);
+    assert.equal(JSON.stringify(chatBody).includes("server-only-key"), false);
+    assert.equal(JSON.stringify(world.tripRows), before);
 
     const capacity = memoryCore();
     const capacityServer = await listen(

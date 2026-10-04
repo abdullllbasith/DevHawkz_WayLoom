@@ -93,7 +93,7 @@ async function findTripScope(prisma: PrismaClient, id: string): Promise<TripScop
   const trip = await prisma.trip.findUnique({
     where: { id },
     include: {
-      vehicle: { select: { driverUserId: true } },
+      vehicle: { select: { driverUserId: true, vehicleId: true } },
       stops: {
         orderBy: { sequence: "asc" },
         include: {
@@ -117,7 +117,7 @@ async function findTripScope(prisma: PrismaClient, id: string): Promise<TripScop
 async function listDriverTrips(prisma: PrismaClient, driverUserId: string): Promise<StoredTrip[]> {
   const trips = await prisma.trip.findMany({
     where: { vehicle: { driverUserId } },
-    include: { stops: { orderBy: { sequence: "asc" } } },
+    include: { vehicle: { select: { vehicleId: true } }, stops: { orderBy: { sequence: "asc" } } },
     orderBy: [{ operationalDate: "asc" }, { tripNumber: "asc" }],
   });
   return trips.map((trip) => toTrip(trip));
@@ -126,7 +126,7 @@ async function listDriverTrips(prisma: PrismaClient, driverUserId: string): Prom
 async function listTripsOnDate(prisma: PrismaClient, operationalDate: string): Promise<StoredTrip[]> {
   const trips = await prisma.trip.findMany({
     where: { operationalDate: utcDate(operationalDate) },
-    include: { stops: { orderBy: { sequence: "asc" } } },
+    include: { vehicle: { select: { vehicleId: true } }, stops: { orderBy: { sequence: "asc" } } },
     orderBy: { tripNumber: "asc" },
   });
   return trips.map((trip) => toTrip(trip));
@@ -235,6 +235,7 @@ function toTrip(trip: {
   routeId: string | null;
   operationalDate: Date;
   vehicleId: string;
+  vehicle?: { vehicleId: string } | null;
   depot: string;
   tripNumber: number;
   status: TripStatusName;
@@ -250,7 +251,7 @@ function toTrip(trip: {
     id: trip.id,
     routeId: trip.routeId,
     operationalDate: trip.operationalDate.toISOString().slice(0, 10),
-    vehicleId: trip.vehicleId,
+    vehicleId: trip.vehicle?.vehicleId ?? trip.vehicleId,
     depot: trip.depot,
     tripNumber: trip.tripNumber,
     status: trip.status,

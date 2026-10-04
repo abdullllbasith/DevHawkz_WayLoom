@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { AI_CONTRACT_VERSION } from "./input.js";
-import { createOpenRouterProvider } from "./openrouter.js";
+import { createOpenRouterProvider, planningGreetingReply } from "./openrouter.js";
 import {
   AiProviderError,
   loadAiSettings,
@@ -66,6 +66,15 @@ const advisory = {
   advisory: true,
 };
 
+test("a greeting does not recite the allocation", () => {
+  assert.equal(
+    planningGreetingReply("hi", "2026-06-02"),
+    "Hello. I can answer questions about the stored plan for 2026-06-02. Ask which vehicle served an order, or whether anything was deferred.",
+  );
+  assert.equal(planningGreetingReply("Hello there", "2026-06-02")?.startsWith("Hello."), true);
+  assert.equal(planningGreetingReply("what about our current plan", "2026-06-02"), null);
+});
+
 test("openrouter is selected only when enabled and keeps the key off public settings", () => {
   const settings = loadAiSettings({
     AI_ENABLED: "true",
@@ -107,6 +116,35 @@ test("openrouter validates a mocked completion and does not call the network wit
     assert.equal(accepted.advisory.use, "planning_explanation");
   }
   assert.equal(calls, 1);
+  const asked: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
+    assert.equal(body.messages[1]?.content.includes("Why was the order deferred?"), true);
+    assert.equal(body.messages[1]?.content.includes("server-only-key"), false);
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ ...advisory, text: "The stored plan does not include a fuel figure." }) } }] });
+  };
+  const answered = await requestAdvisory(input, createOpenRouterProvider(settings, asked, "Why was the order deferred?"), settings);
+  assert.equal(answered.ok, true);
+  if (answered.ok) assert.equal(answered.advisory.text, "The stored plan does not include a fuel figure.");
+  const orderId = "11111111-1111-4111-8111-111111111111";
+  const labeledFetch: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
+    assert.equal(body.messages[1]?.content.includes("SEED-2026-06-02-OUT001"), true);
+    assert.equal(body.messages[1]?.content.includes("What about the current plan?"), true);
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ ...advisory, text: `Vehicle VEH035 served order ${orderId}.` }) } }] });
+  };
+  const labeled = await requestAdvisory(input, createOpenRouterProvider(settings, labeledFetch, "What about the current plan?", [{
+    orderId,
+    orderLabel: "SEED-2026-06-02-OUT001",
+    outletCode: "OUT001",
+    vehicleId: "VEH035",
+    tripNumber: 1,
+    depot: "Peliyagoda",
+  }]), settings);
+  assert.equal(labeled.ok, true);
+  if (labeled.ok) {
+    assert.equal(labeled.advisory.text.includes(orderId), false);
+    assert.equal(labeled.advisory.text.includes("SEED-2026-06-02-OUT001"), true);
+  }
   const missingKey = loadAiSettings({ AI_ENABLED: "true", AI_PROVIDER: "openrouter" });
   const blocked = await requestAdvisory(input, selectAiProvider(missingKey), missingKey);
   assert.deepEqual(blocked, { ok: false, code: "unavailable" });

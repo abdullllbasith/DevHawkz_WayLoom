@@ -31,11 +31,13 @@ export function planningResultFromStored(input: {
     });
   }
   const unallocated: PlanningResult["unallocated"] = [];
+  const omitted: StoredDeferral[] = [];
   for (const deferral of input.deferrals) {
     const deliveryId = input.deliveryIdByOrderId.get(deferral.orderId);
     const constraint = constraintForReason(deferral.reason);
     if (deliveryId === undefined || constraint === null) {
-      return { ok: false, summary };
+      omitted.push(deferral);
+      continue;
     }
     unallocated.push({
       orderId: deferral.orderId,
@@ -43,6 +45,10 @@ export function planningResultFromStored(input: {
       constraint,
       deferralReason: deferral.reason,
     });
+  }
+  const served = trips.reduce((sum, trip) => sum + trip.orderIds.length, 0);
+  if (omitted.length > 0 && served === 0 && unallocated.length === 0) {
+    return { ok: false, summary };
   }
   return {
     ok: true,

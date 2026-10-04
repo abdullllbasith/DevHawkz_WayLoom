@@ -41,7 +41,8 @@ import { confirmReceipt } from "../domain/receipt.js";
 import type { ReceiptStore } from "../domain/receipt.js";
 import type { AiAuditWriter } from "../ai/audit.js";
 import { explainPlanning } from "../ai/planning-explanation.js";
-import { loadAiSettings, selectAiProvider } from "../ai/provider.js";
+import { createOpenRouterProvider, planningGreetingReply, type PlanningOrderLabel } from "../ai/openrouter.js";
+import { loadAiSettings, selectAiProvider, type AiProvider } from "../ai/provider.js";
 import { planningResultFromStored } from "../ai/stored-planning.js";
 import type { PlanningContextLoadResult } from "../domain/planning-context.js";
 import { executePlanningRun } from "../domain/planning-run.js";
@@ -117,6 +118,8 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
     ),
     route("POST", "/api/planning/:date/explanation", ["DISPATCHER"], (context, response, request) =>
       explainStoredPlanning(deps, context, response, request), /^\/api\/planning\/[^/]+\/explanation$/),
+    route("POST", "/api/planning/:date/chat", ["DISPATCHER"], (context, response, request) =>
+      chatAboutStoredPlanning(deps, context, response, request), /^\/api\/planning\/[^/]+\/chat$/),
     route("GET", "/api/planning/:date", ["DISPATCHER"], (_context, response, request) =>
       readPlanning(deps, response, request), /^\/api\/planning\/[^/]+$/),
     route("POST", "/api/trips/:id/confirm", ["DISPATCHER"], (context, response, request) =>
@@ -358,18 +361,7 @@ async function explainStoredPlanning(
     return;
   }
   const operationalDate = parsedDate.value;
-  const [trips, deferrals] = await Promise.all([
-    deps.listTripsOnDate(operationalDate),
-    deps.listDeferrals({ orderDate: operationalDate }),
-  ]);
-  const deliveryIdByOrderId = new Map<string, string>();
-  for (const deferral of deferrals) {
-    const order = await deps.orders.findById(deferral.orderId);
-    if (order !== null) {
-      deliveryIdByOrderId.set(order.id, order.deliveryId);
-    }
-  }
-  const stored = planningResultFromStored({ operationalDate, trips, deferrals, deliveryIdByOrderId });
+  const stored = await storedPlanForDate(deps, operationalDate);
   if (!stored.ok) {
     sendJson(response, 200, {
       ok: false,
@@ -383,13 +375,115 @@ async function explainStoredPlanning(
   const explained = await explainPlanning({
     result: stored.result,
     capturedAt: deps.now().toISOString(),
-    provider: selectAiProvider(settings),
+    provider: planningProvider(settings, stored.orderLabels),
     settings,
     actorUserId: context.userId,
     occurredAt: deps.now(),
     audit: deps.aiAudit ?? { append: () => Promise.reject(new Error("audit unavailable")) },
   });
   sendJson(response, 200, explained);
+}
+
+async function chatAboutStoredPlanning(
+  deps: CoreDependencies,
+  context: RequestSecurityContext,
+  response: ServerResponse,
+  request: IncomingMessage,
+): Promise<void> {
+  const date = pathValue(request, /^\/api\/planning\/([^/]+)\/chat$/);
+  const parsedDate = parsePlanningDate(date === null ? undefined : decodeURIComponent(date));
+  const body = await readJson(request);
+  const question = parsedDate.ok && body !== "invalid" ? parsePlanningQuestion(body) : null;
+  if (!parsedDate.ok || body === "invalid" || question === null) {
+    sendDomainFailure(response, "invalid_input");
+    return;
+  }
+  const greeting = planningGreetingReply(question, parsedDate.value);
+  if (greeting !== null) {
+    sendJson(response, 200, {
+      ok: true,
+      advisory: {
+        contractVersion: "1",
+        kind: "explanation",
+        use: "planning_explanation",
+        text: greeting,
+        factRefs: [],
+        sourceFacts: [],
+        advisory: true,
+      },
+      allocationChanged: false,
+    });
+    return;
+  }
+  const stored = await storedPlanForDate(deps, parsedDate.value);
+  if (!stored.ok) {
+    sendJson(response, 200, {
+      ok: false,
+      code: "insufficient_context",
+      fallbackText: stored.summary,
+      allocationChanged: false,
+    });
+    return;
+  }
+  const settings = loadAiSettings(deps.aiEnv ?? {});
+  const provider = planningProvider(settings, stored.orderLabels, question);
+  const explained = await explainPlanning({
+    result: stored.result,
+    capturedAt: deps.now().toISOString(),
+    provider,
+    settings,
+    actorUserId: context.userId,
+    occurredAt: deps.now(),
+    audit: deps.aiAudit ?? { append: () => Promise.reject(new Error("audit unavailable")) },
+  });
+  sendJson(response, 200, explained);
+}
+
+function planningProvider(settings: ReturnType<typeof loadAiSettings>, orderLabels: readonly PlanningOrderLabel[], question?: string): AiProvider {
+  const selected = selectAiProvider(settings);
+  if (selected.id !== "openrouter") return selected;
+  return createOpenRouterProvider(settings, globalThis.fetch, question, orderLabels);
+}
+
+async function storedPlanForDate(deps: CoreDependencies, operationalDate: string) {
+  const [trips, deferrals] = await Promise.all([
+    deps.listTripsOnDate(operationalDate),
+    deps.listDeferrals({ orderDate: operationalDate }),
+  ]);
+  const orderIds = new Set<string>();
+  for (const trip of trips) {
+    for (const stop of trip.stops) orderIds.add(stop.orderId);
+  }
+  for (const deferral of deferrals) orderIds.add(deferral.orderId);
+  const deliveryIdByOrderId = new Map<string, string>();
+  const orderLabels: PlanningOrderLabel[] = [];
+  for (const orderId of orderIds) {
+    const order = await deps.orders.findById(orderId);
+    if (order === null) continue;
+    deliveryIdByOrderId.set(order.id, order.deliveryId);
+    const trip = trips.find((item) => item.stops.some((stop) => stop.orderId === orderId)) ?? null;
+    orderLabels.push({
+      orderId: order.id,
+      orderLabel: order.deliveryId,
+      outletCode: order.outletCode,
+      vehicleId: trip?.vehicleId ?? null,
+      tripNumber: trip?.tripNumber ?? null,
+      depot: trip?.depot ?? null,
+    });
+  }
+  const stored = planningResultFromStored({ operationalDate, trips, deferrals, deliveryIdByOrderId });
+  if (!stored.ok) return stored;
+  return { ok: true as const, result: stored.result, orderLabels };
+}
+
+function parsePlanningQuestion(value: unknown): string | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (Object.keys(record).length !== 1 || !("question" in record)) return null;
+  const question = record.question;
+  if (typeof question !== "string" || question.length < 1 || question.length > 240 || question.trim() !== question) return null;
+  if (/password|token|secret|cookie|authorization|api[_-]?key/i.test(question)) return null;
+  return question;
 }
 
 function parseEmptyBody(value: unknown): boolean {

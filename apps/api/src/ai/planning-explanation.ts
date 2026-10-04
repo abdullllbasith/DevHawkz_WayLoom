@@ -73,9 +73,11 @@ export async function explainPlanning(input: {
 }
 
 function planningFallback(input: PlanningExplanationInput): string {
+  const assignments = [...new Set(input.served.map((item) => `${item.vehicleId} trip ${item.tripNumber}`))];
+  const served = input.served.length === 0 ? "no served orders" : `${input.served.length} served orders by ${assignments.join(", ")}`;
   if (input.deferred.length === 0) {
-    return `Planning ${input.operationalDate}: ${input.served.length} served orders. No deferred reason was supplied.`;
+    return `Planning ${input.operationalDate}: ${served}. No deferred reason was supplied.`;
   }
   const reasons = input.deferred.map((item) => `${item.deliveryId} ${item.constraint} ${item.deferralReason ?? "no deferral reason"}`);
-  return `Planning ${input.operationalDate}: ${reasons.join("; ")}.`;
+  return `Planning ${input.operationalDate}: ${served}. ${reasons.join("; ")}.`;
 }

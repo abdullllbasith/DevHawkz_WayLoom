@@ -31,12 +31,16 @@ test("a capacity deferral is not given a guessed constraint", () => {
     deliveryIdByOrderId: new Map([[orderId, "ORD-100"]]),
   };
   const built = planningResultFromStored(input);
-  assert.equal(built.ok, false);
-  if (built.ok) return;
-  assert.equal(built.summary.includes("weight_capacity"), false);
-  assert.equal(built.summary.includes("volume_capacity"), false);
-  assert.equal(built.summary, storedPlanningSummary(input));
-  assert.match(built.summary, /ORD-100 NO_CAPACITY/);
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.equal(built.result.unallocated.length, 0);
+  assert.equal(JSON.stringify(built.result).includes("weight_capacity"), false);
+  assert.equal(JSON.stringify(built.result).includes("volume_capacity"), false);
+  const onlyCapacity = planningResultFromStored({ ...input, trips: [trip([])] });
+  assert.equal(onlyCapacity.ok, false);
+  if (onlyCapacity.ok) return;
+  assert.equal(onlyCapacity.summary, storedPlanningSummary({ ...input, trips: [trip([])] }));
+  assert.match(onlyCapacity.summary, /ORD-100 NO_CAPACITY/);
 });
 
 function trip(orderIds: string[]): StoredTrip {
