@@ -1,4 +1,6 @@
 const localDatabases = ["wayloom_development", "wayloom_test"] as const;
+const localHosts = ["127.0.0.1", "postgres"] as const;
+const placeholderPasswords = ["PASSWORD", "build"] as const;
 
 export class ImportTargetError extends Error {
   constructor(message: string) {
@@ -26,15 +28,27 @@ export function assertImportDatabaseTarget(
     throw new ImportTargetError("DATABASE_URL is not a valid database URL.");
   }
   const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
-  const allowedDatabase = localDatabases.some((name) => name === database);
-  if (
-    (url.protocol !== "postgresql:" && url.protocol !== "postgres:") ||
-    url.hostname !== "127.0.0.1" ||
-    !allowedDatabase
-  ) {
+  const postgresql = url.protocol === "postgresql:" || url.protocol === "postgres:";
+  if (!postgresql || database.length === 0) {
+    throw new ImportTargetError("DATABASE_URL is not a valid database URL.");
+  }
+
+  const allowedLocal =
+    url.hostname === "127.0.0.1" && localDatabases.some((name) => name === database);
+  const allowedRemoteDevelopment =
+    nodeEnv === "development" &&
+    !localHosts.some((host) => host === url.hostname) &&
+    database === "postgres" &&
+    !isPlaceholderPassword(url.password);
+
+  if (!allowedLocal && !allowedRemoteDevelopment) {
     throw new ImportTargetError(
-      "Refusing competition import. The database target is not the local development or test database.",
+      "Refusing competition import. The database target is not the local development or test database, or a development remote postgres database.",
     );
   }
   return { database };
+}
+
+function isPlaceholderPassword(password: string): boolean {
+  return password.length === 0 || placeholderPasswords.some((placeholder) => placeholder === password);
 }

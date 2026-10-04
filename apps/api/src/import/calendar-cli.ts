@@ -91,7 +91,7 @@ try {
         await work();
       },
     }),
-    { timeout: 120_000 },
+    { timeout: 600_000 },
   );
   console.log(`database=${targetDatabase}`);
   console.log(`source_rows=${String(validated.rows.length)}`);

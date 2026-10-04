@@ -117,7 +117,14 @@ test("an unsafe database target is refused before connection", async () => {
         "postgresql://wayloom_app:secret@example.com:5432/wayloom_development",
         "development",
       ),
-    /local development or test/,
+    /local development or test|development remote postgres/,
+  );
+  assert.deepEqual(
+    assertImportDatabaseTarget(
+      "postgresql://wayloom_app:real-secret@db.example.supabase.co:5432/postgres",
+      "development",
+    ),
+    { database: "postgres" },
   );
   const result = await runCompetitionImport({
     repoRoot: "G:/WayLoom/DevHawkz_WayLoom",
