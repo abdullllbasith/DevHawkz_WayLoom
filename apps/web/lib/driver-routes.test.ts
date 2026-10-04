@@ -21,7 +21,7 @@ test("driver routes keep server order and do not invent distance", () => {
   ]);
   assert.equal(routes?.[0]?.stops[0]?.orderId, "order-a");
   assert.equal(routes?.[0]?.stops.length, 2);
-  assert.equal(displayRouteIdentity(routes![0]!), "trip-1");
+  assert.equal(displayRouteIdentity(routes![0]!), "RTE-001");
   assert.equal(JSON.stringify(routes).includes("km"), false);
 });
 

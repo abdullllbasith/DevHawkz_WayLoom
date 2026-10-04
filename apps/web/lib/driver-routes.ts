@@ -1,3 +1,5 @@
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type DriverStop = {
   id: string;
   tripId: string;
@@ -33,7 +35,9 @@ export function readDriverTrip(value: unknown): DriverTrip | null {
 }
 
 export function displayRouteIdentity(trip: DriverTrip): string {
-  return trip.routeId !== null && trip.routeId.length > 0 ? trip.routeId : trip.id;
+  const routeId = trip.routeId?.trim() ?? "";
+  if (routeId.length > 0 && !UUID_PATTERN.test(routeId)) return routeId;
+  return `RTE-${String(trip.tripNumber).padStart(3, "0")}`;
 }
 
 function readTrip(value: unknown): DriverTrip | null {

@@ -1,8 +1,14 @@
+import Link from "next/link";
+
+import { StatusBanner } from "../../status-banner";
+
 export default function DriverStopsPage() {
   return (
-    <section className="driver-empty">
-      <h2>Delivery stop details</h2>
-      <p>Stop details are not shown until an assigned route is opened. Stop order cannot be changed here.</p>
-    </section>
+    <StatusBanner
+      tone="empty"
+      title="No stop selected"
+      body="Open a stop from My Routes to continue."
+      action={<Link className="btn-primary driver-touch" href="/driver">Back to My Routes</Link>}
+    />
   );
 }

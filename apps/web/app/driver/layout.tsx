@@ -6,6 +6,7 @@ import { resolveApiOrigin } from "../../lib/content-security-policy";
 import { driverAccess, parseDriverIdentity } from "../../lib/driver-shell";
 import { sessionRole } from "../../lib/dispatcher-shell";
 import { DriverFrame } from "./frame";
+import "../dispatcher/dispatcher.css";
 import "./driver.css";
 
 export default async function DriverLayout({ children }: { children: ReactNode }) {
@@ -36,7 +37,7 @@ export default async function DriverLayout({ children }: { children: ReactNode }
     );
   }
   return (
-    <DriverFrame apiOrigin={origin} displayName={identity.displayName}>
+    <DriverFrame displayName={identity.displayName}>
       {children}
     </DriverFrame>
   );

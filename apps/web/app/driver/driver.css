@@ -1,161 +1,289 @@
-.driver-shell {
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+.driver-sidebar-footer {
+  margin-top: auto;
 }
 
-.driver-top,
-.driver-heading,
-.driver-main {
-  padding: 16px;
-}
-
-.driver-top {
-  display: flex;
+.driver-link {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  height: 38px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.driver-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1;
 }
 
-.driver-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: #0f172a;
+.driver-link.is-online {
+  color: #047857;
 }
 
-.driver-identity {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
-  color: #475569;
+.driver-link.is-offline {
+  color: #b45309;
 }
 
-.driver-top .dispatcher-logout {
-  margin-left: auto;
+.driver-link.is-syncing {
+  color: #1d4ed8;
 }
 
-.driver-heading h1 {
-  margin: 4px 0 0;
-  font-size: 22px;
+.driver-kpi-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
 }
 
-.driver-heading p,
-.driver-crumb {
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
+.driver-kpi-value {
+  overflow-wrap: anywhere;
+  font-size: 18px;
 }
 
-.driver-main {
-  padding-bottom: 96px;
-}
-
-.driver-empty,
-.driver-denied,
-.driver-card {
+.driver-notice,
+.driver-denied {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
 }
 
-.driver-list {
-  display: grid;
+.driver-form {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.driver-card h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
+.driver-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
 }
 
-.driver-card p,
-.driver-empty p,
-.driver-denied p {
-  margin: 4px 0;
-  color: #475569;
+.driver-field input,
+.driver-field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 500;
+  color: #0f172a;
+  background: #ffffff;
 }
 
-.driver-card a,
-.driver-action {
+.driver-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.driver-touch {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #0f172a;
-  color: #ffffff;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.driver-nav {
-  position: sticky;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  padding: 8px;
-  background: #ffffff;
-  border-top: 1px solid #e2e8f0;
-}
-
-.driver-nav a {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  text-align: center;
   text-decoration: none;
-  color: #475569;
+}
+
+.driver-id {
+  font-size: 11px;
+  text-align: left;
+  word-break: break-all;
+}
+
+.driver-row-selected {
+  background: #f8fafc;
+}
+
+.driver-side-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.driver-route-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.driver-route-id {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.driver-route-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.driver-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.driver-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.driver-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.driver-meta-list,
+.driver-sync-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.driver-meta-list li,
+.driver-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #334155;
+}
+
+.driver-note p,
+.driver-sync-empty p {
+  margin: 0;
+}
+
+.driver-meta-k {
+  display: block;
   font-size: 11px;
   font-weight: 600;
-  border-radius: 8px;
+  color: #64748b;
 }
 
-.driver-nav a[aria-current="page"] {
-  background: #eff6ff;
+.driver-side-card > .driver-open {
+  width: 100%;
+  gap: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.driver-sync-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.driver-sync-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.driver-sync-type {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+.driver-sync-state {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.driver-sync-state.is-done {
+  color: #15803d;
+}
+
+.driver-sync-state.is-active {
   color: #1d4ed8;
 }
 
+.driver-sync-state.is-warn {
+  color: #b45309;
+}
+
+.driver-sync-note {
+  font-size: 12px;
+  color: #64748b;
+}
+
+@media (max-width: 1023px) {
+  .driver-app .dispatcher-menu {
+    position: relative;
+    z-index: 60;
+  }
+}
+
+.driver-app .dispatcher-menu {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff center / 18px 14px no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 14'%3E%3Cpath d='M0 1h18M0 7h18M0 13h18' stroke='%230f172a' stroke-width='2'/%3E%3C/svg%3E");
+  cursor: pointer;
+}
+
+.orders-middle-grid .dashboard-feedback {
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .driver-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .driver-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
 @media (min-width: 768px) {
-  .driver-shell {
-    grid-template-columns: 220px minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
+  .driver-kpi-value {
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .driver-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .driver-nav {
-    position: static;
-    grid-column: 1;
-    grid-row: 1 / span 3;
-    display: flex;
-    flex-direction: column;
-    border-top: 0;
-    border-right: 1px solid #e2e8f0;
-    padding: 16px;
-  }
-
-  .driver-top,
-  .driver-heading,
-  .driver-main {
-    grid-column: 2;
-  }
-
-  .driver-main {
-    padding-bottom: 24px;
+  .driver-app .dispatcher-menu {
+    display: none;
   }
 }
