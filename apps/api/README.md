@@ -70,7 +70,8 @@ These contracts are the request and response allowlists for the core API. They d
 | `GET /api/trips/:id` | path id | trip and stops below | trip read |
 | `POST /api/trips/:id/confirm` | none | same trip | `confirmTrip` |
 | `GET /api/deferrals` | optional `orderId`, `reason` | deferral fields below | deferral read |
-| `GET /api/loading/tasks` | none | loading fields below | loading read for the assigned loader |
+| `GET /api/loading/stops` | none | confirmed allocated stops with no loading record | Loader discovery; verification still creates the record |
+| `GET /api/loading/tasks` | none | loading fields below | loading read for the Loader who verified the record |
 | `POST /api/loading/:id/verify` | `loadedUnits` | loading fields below | `verifyLoading`; path id becomes `tripStopId` |
 | `POST /api/loading/:id/shortfall` | `shortfallUnits`; optional `details` | loading fields below | `reportShortfall`; path id becomes `tripStopId` |
 | `GET /api/driver/routes` | none | trip and stops below | trip read for the assigned driver |

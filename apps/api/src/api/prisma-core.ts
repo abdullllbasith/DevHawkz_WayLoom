@@ -13,6 +13,7 @@ import { prismaSyncBatchStore } from "../domain/sync-event-store.js";
 import type { StoredTrip, TripStatusName } from "../domain/trip.js";
 import { prismaTripStore } from "../domain/trip-store.js";
 import { loadPlanningRunContext } from "./planning-load.js";
+import type { EligibleLoadingStopResponse } from "../contracts/api-contracts.js";
 import type { CoreDependencies, OrderListFilter, TripScope } from "./core-routes.js";
 
 export function prismaCore(prisma: PrismaClient): Omit<CoreDependencies, "now"> {
@@ -42,6 +43,9 @@ export function prismaCore(prisma: PrismaClient): Omit<CoreDependencies, "now"> 
     },
     listLoading(loaderUserId) {
       return listLoading(prisma, loaderUserId);
+    },
+    listEligibleLoadingStops() {
+      return listEligibleLoadingStops(prisma);
     },
     deliveryIdsForOrder(orderId) {
       return deliveryIdsForOrder(prisma, orderId);
@@ -145,6 +149,46 @@ async function listDeferrals(
     orderId: row.orderId,
     reason: row.reason,
     reportedAt: row.reportedAt,
+  }));
+}
+
+async function listEligibleLoadingStops(prisma: PrismaClient): Promise<EligibleLoadingStopResponse[]> {
+  const rows = await prisma.tripStop.findMany({
+    where: {
+      trip: { status: "CONFIRMED" },
+      order: { status: "PLANNED_ALLOCATED" },
+      loadingRecords: { none: {} },
+    },
+    include: {
+      trip: { include: { vehicle: { include: { driver: { select: { displayName: true } } } } } },
+      order: { include: { outlet: true } },
+    },
+    orderBy: [{ trip: { operationalDate: "asc" } }, { trip: { tripNumber: "asc" } }, { sequence: "asc" }],
+  });
+  return rows.map((row) => ({
+    tripStopId: row.id,
+    sequence: row.sequence,
+    plannedArrival: clock(row.plannedArrival),
+    tripId: row.tripId,
+    routeId: row.trip.routeId,
+    operationalDate: row.trip.operationalDate.toISOString().slice(0, 10),
+    depot: row.trip.depot,
+    tripNumber: row.trip.tripNumber,
+    vehicleId: row.trip.vehicle.vehicleId,
+    vehicleType: row.trip.vehicle.type,
+    vehicleTemp: row.trip.vehicle.temp,
+    weightCapKg: row.trip.vehicle.weightCapKg.toString(),
+    volumeCapM3: row.trip.vehicle.volumeCapM3.toString(),
+    driverName: row.trip.vehicle.driver?.displayName ?? null,
+    orderId: row.orderId,
+    deliveryId: row.order.deliveryId,
+    outletCode: row.order.outlet.outletId,
+    district: row.order.outlet.district,
+    brand: row.order.outlet.brand,
+    tempRequirement: row.order.tempRequirement,
+    expectedUnits: row.order.orderUnits,
+    orderWeightKg: row.order.orderWeightKg.toString(),
+    orderVolumeM3: row.order.orderVolumeM3.toString(),
   }));
 }
 

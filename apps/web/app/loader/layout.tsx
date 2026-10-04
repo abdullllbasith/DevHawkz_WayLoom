@@ -6,6 +6,7 @@ import { resolveApiOrigin } from "../../lib/content-security-policy";
 import { loaderAccess, parseLoaderIdentity } from "../../lib/loader-shell";
 import { sessionRole } from "../../lib/dispatcher-shell";
 import { LoaderFrame } from "./frame";
+import "../dispatcher/dispatcher.css";
 import "./loader.css";
 
 export default async function LoaderLayout({ children }: { children: ReactNode }) {

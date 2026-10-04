@@ -10,7 +10,9 @@ import { createApp } from "../app.js";
 import type { DeferralStore, StoredDeferral } from "../domain/deferral.js";
 import type { DeliveryStore, StoredDelivery, StoredProof } from "../domain/delivery.js";
 import type { ExceptionStore, StoredException } from "../domain/exception.js";
+import { isEligibleLoadingStop } from "../domain/loading-discovery.js";
 import type { LoadingStore, StoredLoading } from "../domain/loading.js";
+import type { EligibleLoadingStopResponse } from "../contracts/api-contracts.js";
 import type { OrderOutlet, OrderStore, OrderTransitionFacts, StoredOrder } from "../domain/order.js";
 import type { ReceiptStore } from "../domain/receipt.js";
 import type { StoredSyncEvent, SyncBatchStore } from "../domain/sync-batch.js";
@@ -163,16 +165,33 @@ test("core endpoints keep authorization, validation, and domain results", async 
     assert.equal(missingCsrf.status, 403);
     assert.equal(((await missingCsrf.json()) as { error: { code: string } }).error.code, "CSRF_INVALID");
 
+    const beforeStops = (await (await fetch(url(server, "/api/loading/stops"), { headers: { cookie: loaderCookie } })).json()) as EligibleLoadingStopResponse[];
+    assert.equal(beforeStops.length, 1);
+    assert.equal(beforeStops[0]?.tripStopId, loadStop);
+    assert.equal(beforeStops[0]?.expectedUnits, 10);
+    assert.equal(beforeStops[0]?.sequence, 0);
+    assert.equal((await fetch(url(server, "/api/loading/stops"), { headers: { cookie: driverCookie } })).status, 403);
+    assert.equal((await fetch(url(server, "/api/loading/stops"), { headers: { cookie: dispatcherCookie } })).status, 403);
     const verified = await send(server, `/api/loading/${loadStop}/verify`, loaderCookie, { loadedUnits: 8 });
     assert.equal(verified.status, 201);
+    const duplicate = await send(server, `/api/loading/${loadStop}/verify`, loaderCookie, { loadedUnits: 8 });
+    assert.equal(duplicate.status, 409);
     const otherTask = await send(server, `/api/loading/${loadStop}/verify`, otherLoaderCookie, { loadedUnits: 8 });
     assert.equal(otherTask.status, 404);
+    const afterStops = (await (await fetch(url(server, "/api/loading/stops"), { headers: { cookie: otherLoaderCookie } })).json()) as EligibleLoadingStopResponse[];
+    assert.equal(afterStops.some((item) => item.tripStopId === loadStop), false);
     const shortfall = await send(server, `/api/loading/${loadStop}/shortfall`, loaderCookie, { shortfallUnits: 2, loaderUserId: loader.id });
     assert.equal(shortfall.status, 400);
     const reported = await send(server, `/api/loading/${loadStop}/shortfall`, loaderCookie, { shortfallUnits: 2, details: "missing" });
     assert.equal(reported.status, 200);
+    const foreignShortfall = await send(server, `/api/loading/${loadStop}/shortfall`, otherLoaderCookie, { shortfallUnits: 1 });
+    assert.equal(foreignShortfall.status, 404);
     const tasks = (await (await fetch(url(server, "/api/loading/tasks"), { headers: { cookie: otherLoaderCookie } })).json()) as unknown[];
     assert.equal(tasks.length, 0);
+    const owned = (await (await fetch(url(server, "/api/loading/tasks"), { headers: { cookie: loaderCookie } })).json()) as { tripStopId: string; loaderUserId: string }[];
+    assert.equal(owned.length, 1);
+    assert.equal(owned[0]?.loaderUserId, loader.id);
+    assert.equal(owned[0]?.tripStopId, loadStop);
 
     const foreignRoute = await fetch(url(server, `/api/trips/${otherDriverTrip}`), { headers: { cookie: driverCookie } });
     assert.equal(foreignRoute.status, 404);
@@ -480,6 +499,49 @@ function memoryCore(): CoreDependencies & { orderRows: StoredOrder[]; tripRows: 
     },
     async listLoading(loaderUserId) {
       return state.loading.filter((item) => item.loaderUserId === loaderUserId);
+    },
+    async listEligibleLoadingStops() {
+      const rows: EligibleLoadingStopResponse[] = [];
+      const trips = [...state.trips].sort((left, right) => left.operationalDate.localeCompare(right.operationalDate) || left.tripNumber - right.tripNumber);
+      for (const current of trips) {
+        const stops = [...current.stops].sort((left, right) => left.sequence - right.sequence);
+        for (const stop of stops) {
+          const row = state.orders.find((item) => item.id === stop.orderId);
+          if (row === undefined) continue;
+          if (!isEligibleLoadingStop({
+            tripStatus: current.status,
+            orderStatus: row.status,
+            hasLoadingRecord: state.loading.some((item) => item.tripStopId === stop.id),
+          })) continue;
+          const assignedDriver = current.vehicleDriverUserId === driver.id ? driver : current.vehicleDriverUserId === otherDriver.id ? otherDriver : null;
+          rows.push({
+            tripStopId: stop.id,
+            sequence: stop.sequence,
+            plannedArrival: stop.plannedArrival,
+            tripId: current.id,
+            routeId: current.routeId,
+            operationalDate: current.operationalDate,
+            depot: current.depot,
+            tripNumber: current.tripNumber,
+            vehicleId: current.vehicleId === planningVehicle.id ? "VEH001" : current.vehicleId,
+            vehicleType: planningVehicle.type,
+            vehicleTemp: planningVehicle.temp,
+            weightCapKg: planningVehicle.weightCapKg,
+            volumeCapM3: planningVehicle.volumeCapM3,
+            driverName: assignedDriver?.displayName ?? null,
+            orderId: row.id,
+            deliveryId: row.deliveryId,
+            outletCode: row.outletCode,
+            district: row.district,
+            brand: row.brand,
+            tempRequirement: row.tempRequirement,
+            expectedUnits: row.orderUnits,
+            orderWeightKg: row.orderWeightKg,
+            orderVolumeM3: row.orderVolumeM3,
+          });
+        }
+      }
+      return rows;
     },
     async deliveryIdsForOrder(orderId) {
       const stopIds = new Set(state.trips.flatMap((item) => item.stops).filter((stop) => stop.orderId === orderId).map((stop) => stop.id));

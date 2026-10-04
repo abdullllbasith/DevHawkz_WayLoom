@@ -102,6 +102,32 @@ export type DeferralResponse = {
   reportedAt: string;
 };
 
+export type EligibleLoadingStopResponse = {
+  tripStopId: string;
+  sequence: number;
+  plannedArrival: string | null;
+  tripId: string;
+  routeId: string | null;
+  operationalDate: string;
+  depot: string;
+  tripNumber: number;
+  vehicleId: string;
+  vehicleType: string;
+  vehicleTemp: string;
+  weightCapKg: string;
+  volumeCapM3: string;
+  driverName: string | null;
+  orderId: string;
+  deliveryId: string;
+  outletCode: string;
+  district: string;
+  brand: string;
+  tempRequirement: "chilled" | "ambient";
+  expectedUnits: number;
+  orderWeightKg: string;
+  orderVolumeM3: string;
+};
+
 export type LoadingTaskResponse = {
   id: string;
   tripStopId: string;

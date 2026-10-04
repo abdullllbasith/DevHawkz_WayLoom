@@ -21,6 +21,7 @@ import {
   toDeliveryResponse,
   toExceptionResponse,
   toLoadingTaskResponse,
+  type EligibleLoadingStopResponse,
   toOrderResponse,
   toPlanningResult,
   toProofResponse,
@@ -87,6 +88,7 @@ export type CoreDependencies = {
   listTripsOnDate(operationalDate: string): Promise<StoredTrip[]>;
   listDeferrals(filter: DeferralListFilter): Promise<StoredDeferral[]>;
   listLoading(loaderUserId: string): Promise<StoredLoading[]>;
+  listEligibleLoadingStops(): Promise<EligibleLoadingStopResponse[]>;
   deliveryIdsForOrder(orderId: string): Promise<string[]>;
   listExceptions(): Promise<StoredException[]>;
   loadPlanningRunContext(operationalDate: string): Promise<PlanningContextLoadResult>;
@@ -127,6 +129,7 @@ export function coreRoutes(deps: CoreDependencies): BusinessRoute[] {
       listDeferralRoute(deps, response, request),
     ),
     route("GET", "/api/loading/tasks", ["LOADER"], (context, response) => listLoadingRoute(deps, context, response)),
+    route("GET", "/api/loading/stops", ["LOADER"], (_context, response) => listEligibleLoadingRoute(deps, response)),
     route("POST", "/api/loading/:id/verify", ["LOADER"], (context, response, request) =>
       verifyLoadingRoute(deps, context, response, request), /^\/api\/loading\/[^/]+\/verify$/),
     route("POST", "/api/loading/:id/shortfall", ["LOADER"], (context, response, request) =>
@@ -473,6 +476,11 @@ async function listDeferralRoute(deps: CoreDependencies, response: ServerRespons
   }
   const rows = await deps.listDeferrals(query.value);
   sendJson(response, 200, rows.map(toDeferralResponse));
+}
+
+async function listEligibleLoadingRoute(deps: CoreDependencies, response: ServerResponse): Promise<void> {
+  const rows = await deps.listEligibleLoadingStops();
+  sendJson(response, 200, rows);
 }
 
 async function listLoadingRoute(
