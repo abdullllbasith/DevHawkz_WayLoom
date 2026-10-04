@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { StatusBadge, StatusBanner } from "../../../status-banner";
+import { lifecycleLabel } from "../../../../lib/status-copy";
 import { readStoreOrder, type StoreOrder } from "../../../../lib/store-dashboard";
-import { orderProgressLabel, unavailableTracking } from "../../../../lib/store-tracking";
+import { unavailableTracking } from "../../../../lib/store-tracking";
+import { shortId } from "../../../../lib/short-id";
 
 type LoadState =
   | { kind: "loading" }
@@ -13,6 +16,8 @@ type LoadState =
   | { kind: "unauthorized" }
   | { kind: "missing" }
   | { kind: "ready"; order: StoreOrder; stale: boolean };
+
+const steps = ["SUBMITTED", "CONFIRMED", "PLANNED_ALLOCATED", "LOADED", "DISPATCHED", "DELIVERED", "RECEIPT_CONFIRMED"] as const;
 
 export default function OrderTrackingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -47,49 +52,35 @@ export default function OrderTrackingDetailPage() {
   }, [load]);
 
   return (
-    <div className="store-list">
-      <section className="store-card">
-        <p>
-          <Link href="/store/orders">Back to tracking</Link>
-        </p>
-        <button type="button" className="store-action" onClick={() => load(true)}>
-          Refresh
-        </button>
-      </section>
-      {state.kind === "loading" ? (
-        <section className="store-card">
-          <h2>Loading order</h2>
-        </section>
-      ) : null}
-      {state.kind === "unauthorized" ? (
-        <section className="store-card">
-          <h2>This order is not available</h2>
-          <p>This Store Manager cannot read this outlet order.</p>
-        </section>
-      ) : null}
+    <div className="store-stack">
+      <div className="store-actions">
+        <Link className="store-link" href="/store/orders">Back to tracking</Link>
+        <button type="button" className="store-action" onClick={() => load(true)}>Refresh</button>
+      </div>
+      {state.kind === "loading" ? <StatusBanner tone="loading" title="Reading this order" body="Details stay hidden until the server responds." /> : null}
+      {state.kind === "unauthorized" ? <StatusBanner tone="denied" title="This order is not available" body="This Store Manager cannot read this outlet order." /> : null}
       {state.kind === "missing" ? (
-        <section className="store-card">
-          <h2>Order was not found</h2>
-        </section>
+        <StatusBanner tone="empty" title="Order was not found" body="It is not on the outlets assigned to this account." action={<Link className="store-link" href="/store/orders">Back to tracking</Link>} />
       ) : null}
       {state.kind === "error" ? (
-        <section className="store-card">
-          <h2>Order is unavailable</h2>
-        </section>
+        <StatusBanner tone="error" title="Order is unavailable" body="The order could not be read. This is not an empty record." action={<button type="button" className="store-action" onClick={() => load(false)}>Retry</button>} />
       ) : null}
       {state.kind === "ready" ? (
-        <section className="store-card">
-          {state.stale ? <p>This order is from the last successful read. Refresh to replace it.</p> : null}
-          <h2>{state.order.deliveryId}</h2>
-          <p>Status: {state.order.status}</p>
-          <p>Progress: {orderProgressLabel(state.order.status)}</p>
-          <p>Outlet: {state.order.outletCode}</p>
-          <p>Date: {state.order.orderDate}</p>
-          <p>Units: {state.order.orderUnits}</p>
-          <p>Temperature: {state.order.tempRequirement}</p>
-          <p>Vehicle: {unavailableTracking.vehicle}</p>
-          <p>Route: {unavailableTracking.route}</p>
-          <p>Arrival: {unavailableTracking.eta}</p>
+        <section className="store-card store-order">
+          {state.stale ? <StatusBanner tone="offline" title="Showing the last successful read" body="Refresh to replace it." /> : null}
+          <div className="store-order-head">
+            <h2 title={state.order.deliveryId}>{shortId(state.order.deliveryId)}</h2>
+            <StatusBadge status={state.order.status} />
+          </div>
+          <p className="store-meta">{state.order.outletCode} · {state.order.orderDate} · {state.order.orderUnits} units · {state.order.tempRequirement}</p>
+          <p className="store-meta">Vehicle {unavailableTracking.vehicle} · Route {unavailableTracking.route} · Arrival {unavailableTracking.eta}</p>
+          <ol className="store-steps">
+            {steps.map((step) => (
+              <li key={step} data-current={step === state.order.status ? "true" : undefined}>{lifecycleLabel(step)}</li>
+            ))}
+          </ol>
+          {state.order.status === "DELIVERED" ? <Link className="store-action" href="/store/receipts">Confirm receipt</Link> : null}
+          {state.order.status === "RECEIPT_CONFIRMED" ? <p className="store-meta">Receipt already recorded.</p> : null}
         </section>
       ) : null}
     </div>

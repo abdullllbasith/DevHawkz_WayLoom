@@ -14,7 +14,7 @@ test("store access follows the authenticated role", () => {
 test("submitted store navigation stays inside the four store areas", () => {
   assert.deepEqual(
     storeNavigation.map((item) => item.label),
-    ["Store Dashboard", "Create Order", "Order Confirmation and Tracking", "Confirm Receipt and Report Issues"],
+    ["Store Dashboard", "Pending Deliveries", "Received Deliveries", "Create Order"],
   );
   assert.equal(activeStoreHref("/store"), "/store");
   assert.equal(activeStoreHref("/store/orders/new"), "/store/orders/new");

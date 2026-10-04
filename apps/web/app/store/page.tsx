@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { readStoreOrders, storeStatusCounts, type StoreOrder } from "../../lib/store-dashboard";
+import { StatusBanner } from "../status-banner";
+import { StoreDeliveryCard } from "./delivery-card";
+import { awaitingReceiptOrders, pendingOrders, readStoreOrders, receivedOrders, type StoreOrder } from "../../lib/store-dashboard";
 
 type LoadState =
   | { kind: "loading" }
@@ -14,6 +16,7 @@ type LoadState =
 
 export default function StoreDashboardPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,67 +37,67 @@ export default function StoreDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
+  if (state.kind === "loading") {
+    return <StatusBanner tone="loading" title="Reading assigned orders" body="Orders stay hidden until the server responds." />;
+  }
+  if (state.kind === "unauthorized") {
+    return <StatusBanner tone="denied" title="Orders are not available" body="This Store Manager cannot read these outlet orders." />;
+  }
+  if (state.kind === "error") {
+    return (
+      <StatusBanner
+        tone="error"
+        title="Orders are unavailable"
+        body="The order list could not be read. This is not an empty outlet."
+        action={<button type="button" className="store-action" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>}
+      />
+    );
+  }
+  if (state.kind === "empty") {
+    return (
+      <StatusBanner
+        tone="empty"
+        title="No assigned orders"
+        body="No order is recorded for the outlets assigned to this Store Manager."
+        action={<Link className="store-action" href="/store/orders/new">Create Order</Link>}
+      />
+    );
+  }
+
+  const pending = pendingOrders(state.orders);
+  const waiting = awaitingReceiptOrders(state.orders);
+  const received = receivedOrders(state.orders);
   return (
-    <div className="store-list">
-      <section className="store-card">
-        <p>
-          <Link href="/store/orders/new">Create Order</Link>
-          {" · "}
-          <Link href="/store/orders">Order Confirmation and Tracking</Link>
-        </p>
+    <div className="store-stack">
+      <section className="store-kpis" aria-label="Order status counts">
+        <article className="store-kpi">
+          <span>Pending deliveries</span>
+          <strong>{pending.length}</strong>
+          <em>Not receipt confirmed</em>
+        </article>
+        <article className="store-kpi">
+          <span>Awaiting confirmation</span>
+          <strong>{waiting.length}</strong>
+          <em>Status is Delivered</em>
+        </article>
+        <article className="store-kpi">
+          <span>Received</span>
+          <strong>{received.length}</strong>
+          <em>Receipt confirmed</em>
+        </article>
+        <article className="store-kpi">
+          <span>Assigned orders</span>
+          <strong>{state.orders.length}</strong>
+          <em>Driver, vehicle, and arrival are not on the order</em>
+        </article>
       </section>
-      {state.kind === "loading" ? (
-        <section className="store-card">
-          <h2>Loading assigned orders</h2>
-          <p>Orders stay hidden until the server responds.</p>
-        </section>
-      ) : null}
-      {state.kind === "unauthorized" ? (
-        <section className="store-card">
-          <h2>Orders are not available</h2>
-          <p>This Store Manager cannot read these outlet orders.</p>
-        </section>
-      ) : null}
-      {state.kind === "error" ? (
-        <section className="store-card">
-          <h2>Orders are unavailable</h2>
-          <p>The order list could not be read. This is not an empty outlet.</p>
-        </section>
-      ) : null}
-      {state.kind === "empty" ? (
-        <section className="store-card">
-          <h2>No assigned orders</h2>
-          <p>No order is recorded for the outlets assigned to this Store Manager.</p>
-        </section>
-      ) : null}
-      {state.kind === "ready" ? (
-        <>
-          <section className="store-card">
-            <h2>Status</h2>
-            {storeStatusCounts(state.orders).map((item) => (
-              <p key={item.status}>
-                {item.status}: {item.count}
-              </p>
-            ))}
-            <p>Arrival time, vehicle, and driver: —</p>
-          </section>
-          {state.orders.map((order) => (
-            <article key={order.id} className="store-card">
-              <h2>{order.deliveryId}</h2>
-              <p>Outlet: {order.outletCode}</p>
-              <p>Date: {order.orderDate}</p>
-              <p>Status: {order.status}</p>
-              <p>Units: {order.orderUnits}</p>
-              <p>Temperature: {order.tempRequirement}</p>
-              <p>
-                {order.brand} · {order.district} · {order.depot}
-              </p>
-            </article>
-          ))}
-        </>
-      ) : null}
+      <div className="store-section-head">
+        <h2>Assigned deliveries ({state.orders.length})</h2>
+        <Link className="store-link" href="/store/orders">View pending</Link>
+      </div>
+      {state.orders.map((order) => <StoreDeliveryCard key={order.id} order={order} />)}
     </div>
   );
 }

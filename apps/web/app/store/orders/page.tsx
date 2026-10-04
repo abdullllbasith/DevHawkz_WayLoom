@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { readStoreOrders, type StoreOrder } from "../../../lib/store-dashboard";
-import { orderProgressLabel, unavailableTracking } from "../../../lib/store-tracking";
+import { StatusBanner } from "../../status-banner";
+import { StoreDeliveryCard } from "../delivery-card";
+import { pendingOrders, readStoreOrders, type StoreOrder } from "../../../lib/store-dashboard";
 
 type LoadState =
   | { kind: "loading" }
@@ -15,6 +16,7 @@ type LoadState =
 
 export default function OrderTrackingPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [query, setQuery] = useState("");
 
   const load = useCallback((keepPrevious: boolean) => {
     void fetch("/api/orders", { cache: "no-store" })
@@ -26,7 +28,8 @@ export default function OrderTrackingPage() {
         if (!response.ok) throw new Error("orders_unavailable");
         const orders = readStoreOrders(await response.json());
         if (orders === null) throw new Error("orders_invalid");
-        setState(orders.length === 0 ? { kind: "empty" } : { kind: "ready", orders, stale: false });
+        const pending = pendingOrders(orders);
+        setState(pending.length === 0 ? { kind: "empty" } : { kind: "ready", orders: pending, stale: false });
       })
       .catch(() => {
         setState((current) => (keepPrevious && current.kind === "ready" ? { ...current, stale: true } : { kind: "error" }));
@@ -37,58 +40,35 @@ export default function OrderTrackingPage() {
     load(false);
   }, [load]);
 
+  const visible = useMemo(() => {
+    if (state.kind !== "ready") return [];
+    const needle = query.trim().toLowerCase();
+    if (needle.length === 0) return state.orders;
+    return state.orders.filter((order) => `${order.deliveryId} ${order.outletCode} ${order.brand}`.toLowerCase().includes(needle));
+  }, [query, state]);
+
   return (
-    <div className="store-list">
-      <section className="store-card">
-        <h2>Order Confirmation and Tracking</h2>
-        <p>Status comes from the server. Refresh replaces this view with the latest read.</p>
-        <button type="button" className="store-action" onClick={() => load(true)}>
-          Refresh
-        </button>
-      </section>
-      {state.kind === "loading" ? (
-        <section className="store-card">
-          <h2>Loading orders</h2>
-        </section>
-      ) : null}
-      {state.kind === "unauthorized" ? (
-        <section className="store-card">
-          <h2>Orders are not available</h2>
-          <p>This Store Manager cannot read these outlet orders.</p>
-        </section>
-      ) : null}
+    <div className="store-stack">
+      <div className="store-section-head">
+        <p className="store-meta">These orders are still moving. Receipt confirmed orders are on Received Deliveries.</p>
+        <input className="store-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search delivery or outlet" aria-label="Search pending deliveries" />
+      </div>
+      {state.kind === "loading" ? <StatusBanner tone="loading" title="Reading orders" body="Pending deliveries stay hidden until the server responds." /> : null}
+      {state.kind === "unauthorized" ? <StatusBanner tone="denied" title="Orders are not available" body="This Store Manager cannot read these outlet orders." /> : null}
       {state.kind === "error" ? (
-        <section className="store-card">
-          <h2>Orders are unavailable</h2>
-          <p>The order list could not be read. This is not an empty outlet.</p>
-        </section>
+        <StatusBanner tone="error" title="Orders are unavailable" body="The order list could not be read. This is not an empty outlet." action={<button type="button" className="store-action" onClick={() => load(false)}>Retry</button>} />
       ) : null}
       {state.kind === "empty" ? (
-        <section className="store-card">
-          <h2>No assigned orders</h2>
-        </section>
+        <StatusBanner tone="empty" title="No pending deliveries" body="Every assigned order is receipt confirmed, or none has been created." action={<Link className="store-action" href="/store/orders/new">Create Order</Link>} />
       ) : null}
       {state.kind === "ready" ? (
         <>
-          {state.stale ? (
-            <section className="store-card">
-              <p>This list is from the last successful read. Refresh to replace it.</p>
-            </section>
-          ) : null}
-          {state.orders.map((order) => (
-            <article key={order.id} className="store-card">
-              <h2>{order.deliveryId}</h2>
-              <p>Status: {order.status}</p>
-              <p>Progress: {orderProgressLabel(order.status)}</p>
-              <p>Outlet: {order.outletCode}</p>
-              <p>Vehicle: {unavailableTracking.vehicle}</p>
-              <p>Route: {unavailableTracking.route}</p>
-              <p>Arrival: {unavailableTracking.eta}</p>
-              <p>
-                <Link href={`/store/orders/${order.id}`}>Open order</Link>
-              </p>
-            </article>
-          ))}
+          {state.stale ? <StatusBanner tone="offline" title="Showing the last successful read" body="Refresh to replace this list." /> : null}
+          <div className="store-actions">
+            <button type="button" className="store-action" onClick={() => load(true)}>Refresh</button>
+          </div>
+          {visible.length === 0 ? <StatusBanner tone="empty" title="No deliveries match this search" body="The pending list itself is not empty." /> : null}
+          {visible.map((order) => <StoreDeliveryCard key={order.id} order={order} />)}
         </>
       ) : null}
     </div>

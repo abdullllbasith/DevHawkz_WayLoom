@@ -23,6 +23,18 @@ export function readStoreOrders(value: unknown): StoreOrder[] | null {
   return orders;
 }
 
+export function pendingOrders(orders: readonly StoreOrder[]): StoreOrder[] {
+  return orders.filter((order) => order.status !== "RECEIPT_CONFIRMED");
+}
+
+export function receivedOrders(orders: readonly StoreOrder[]): StoreOrder[] {
+  return orders.filter((order) => order.status === "RECEIPT_CONFIRMED");
+}
+
+export function awaitingReceiptOrders(orders: readonly StoreOrder[]): StoreOrder[] {
+  return orders.filter((order) => order.status === "DELIVERED");
+}
+
 export function storeStatusCounts(orders: readonly StoreOrder[]): { status: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const order of orders) {

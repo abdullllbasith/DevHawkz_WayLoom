@@ -6,6 +6,7 @@ import { resolveApiOrigin } from "../../lib/content-security-policy";
 import { sessionRole } from "../../lib/dispatcher-shell";
 import { parseStoreIdentity, storeAccess } from "../../lib/store-shell";
 import { StoreFrame } from "./frame";
+import "../status-banner.css";
 import "./store.css";
 
 export default async function StoreLayout({ children }: { children: ReactNode }) {
@@ -36,7 +37,7 @@ export default async function StoreLayout({ children }: { children: ReactNode })
     );
   }
   return (
-    <StoreFrame apiOrigin={origin} displayName={identity.displayName}>
+    <StoreFrame displayName={identity.displayName}>
       {children}
     </StoreFrame>
   );
