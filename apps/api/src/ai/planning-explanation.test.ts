@@ -4,6 +4,7 @@ import test from "node:test";
 import type { PlanningResult } from "@wayloom/planning";
 
 import { AI_CONTRACT_VERSION } from "./input.js";
+import { memoryAudit } from "./audit.js";
 import { explainPlanning } from "./planning-explanation.js";
 import type { AiProvider } from "./provider.js";
 
@@ -42,7 +43,7 @@ test("a planning explanation repeats the supplied reason and does not change all
       });
     },
   };
-  const explained = await explainPlanning({ result: result(), capturedAt: "2026-06-02T08:00:00.000Z", provider, settings });
+  const explained = await explainPlanning({ result: result(), capturedAt: "2026-06-02T08:00:00.000Z", provider, settings, actorUserId: "11111111-1111-4111-8111-111111111111", occurredAt: new Date("2026-06-02T08:00:00.000Z"), audit: memoryAudit().writer });
   assert.equal(explained.ok, true);
   assert.equal(explained.allocationChanged, false);
   if (!explained.ok) {
@@ -66,7 +67,7 @@ test("an invented reason falls back to the planning result", async () => {
       });
     },
   };
-  const explained = await explainPlanning({ result: result(), capturedAt: "2026-06-02T08:00:00.000Z", provider, settings });
+  const explained = await explainPlanning({ result: result(), capturedAt: "2026-06-02T08:00:00.000Z", provider, settings, actorUserId: "11111111-1111-4111-8111-111111111111", occurredAt: new Date("2026-06-02T08:00:00.000Z"), audit: memoryAudit().writer });
   assert.equal(explained.ok, false);
   if (explained.ok) {
     return;
@@ -82,6 +83,9 @@ test("an empty planning result is insufficient context", async () => {
     capturedAt: "2026-06-02T08:00:00.000Z",
     provider: { id: "unused", complete: () => Promise.resolve(null) },
     settings,
+    actorUserId: "11111111-1111-4111-8111-111111111111",
+    occurredAt: new Date("2026-06-02T08:00:00.000Z"),
+    audit: memoryAudit().writer,
   });
   assert.equal(explained.ok, false);
   if (!explained.ok) {

@@ -1,11 +1,12 @@
 import { AI_CONTRACT_VERSION, parseAiInput, type InsightMeasurement, type OperationalInsightInput } from "./input.js";
+import { recordAiAudit, type AiAuditWriter } from "./audit.js";
 import { validateAdvisory } from "./boundary.js";
 import type { AiAdvisory } from "./output.js";
 import { requestAdvisory, type AiProvider, type AiSettings } from "./provider.js";
 
 export type OperationalInsight =
   | { ok: true; advisory: AiAdvisory; decisionSupport: true; stateChanged: false }
-  | { ok: false; code: "insufficient_context" | "unavailable" | "invalid_output"; fallbackText: string; stateChanged: false };
+  | { ok: false; code: "insufficient_context" | "unavailable" | "invalid_output" | "audit_failure"; fallbackText: string; stateChanged: false };
 
 export async function explainInsight(input: {
   periodStart: string;
@@ -14,6 +15,9 @@ export async function explainInsight(input: {
   capturedAt: string;
   provider: AiProvider;
   settings: Pick<AiSettings, "timeoutMs" | "maxResponseChars">;
+  actorUserId: string;
+  occurredAt: Date;
+  audit: AiAuditWriter;
 }): Promise<OperationalInsight> {
   const parsed = parseAiInput({
     contractVersion: AI_CONTRACT_VERSION,
@@ -28,7 +32,21 @@ export async function explainInsight(input: {
   }
   const advisory = await requestAdvisory(parsed.value, input.provider, input.settings);
   const checked = advisory.ok ? validateAdvisory(parsed.value, advisory.advisory, input.provider.id) : null;
-  if (!advisory.ok || checked === null || !checked.ok) {
+  const rejected = !advisory.ok || checked === null || !checked.ok;
+  const recorded = await recordAiAudit(input.audit, {
+    actorUserId: input.actorUserId,
+    occurredAt: input.occurredAt,
+    use: "operational_insight",
+    providerId: input.provider.id,
+    contractVersion: "1",
+    validation: rejected ? "rejected" : "accepted",
+    summary: rejected || checked === null || !checked.ok ? "rejected operational insight" : checked.advisory.text.slice(0, 240),
+    humanDecision: "not_recorded",
+  });
+  if (!recorded) {
+    return { ok: false, code: "audit_failure", fallbackText: insightFallback(parsed.value), stateChanged: false };
+  }
+  if (rejected || !checked?.ok) {
     return {
       ok: false,
       code: advisory.ok ? "invalid_output" : "unavailable",

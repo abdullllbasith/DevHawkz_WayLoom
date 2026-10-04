@@ -2,12 +2,13 @@ import type { PlanningResult } from "@wayloom/planning";
 
 import { AI_CONTRACT_VERSION, parseAiInput, type PlanningExplanationInput } from "./input.js";
 import { requestAdvisory, type AiProvider, type AiSettings } from "./provider.js";
+import { recordAiAudit, type AiAuditWriter } from "./audit.js";
 import { validateAdvisory } from "./boundary.js";
 import type { AiAdvisory } from "./output.js";
 
 export type PlanningExplanation =
   | { ok: true; advisory: AiAdvisory; allocationChanged: false }
-  | { ok: false; code: "insufficient_context" | "unavailable" | "invalid_output"; fallbackText: string; allocationChanged: false };
+  | { ok: false; code: "insufficient_context" | "unavailable" | "invalid_output" | "audit_failure"; fallbackText: string; allocationChanged: false };
 
 export function planningExplanationInput(result: PlanningResult, capturedAt: string): { ok: true; value: PlanningExplanationInput } | { ok: false } {
   const parsed = parseAiInput({
@@ -38,6 +39,9 @@ export async function explainPlanning(input: {
   capturedAt: string;
   provider: AiProvider;
   settings: Pick<AiSettings, "timeoutMs" | "maxResponseChars">;
+  actorUserId: string;
+  occurredAt: Date;
+  audit: AiAuditWriter;
 }): Promise<PlanningExplanation> {
   const parsed = planningExplanationInput(input.result, input.capturedAt);
   if (!parsed.ok || (parsed.value.served.length === 0 && parsed.value.deferred.length === 0)) {
@@ -48,6 +52,20 @@ export async function explainPlanning(input: {
     return { ok: false, code: advisory.code === "invalid_output" ? "invalid_output" : "unavailable", fallbackText: planningFallback(parsed.value), allocationChanged: false };
   }
   const checked = validateAdvisory(parsed.value, advisory.advisory, input.provider.id);
+  const accepted = checked.ok;
+  const recorded = await recordAiAudit(input.audit, {
+    actorUserId: input.actorUserId,
+    occurredAt: input.occurredAt,
+    use: "planning_explanation",
+    providerId: input.provider.id,
+    contractVersion: "1",
+    validation: accepted ? "accepted" : "rejected",
+    summary: checked.ok ? checked.advisory.text.slice(0, 240) : "rejected planning explanation",
+    humanDecision: "not_recorded",
+  });
+  if (!recorded) {
+    return { ok: false, code: "audit_failure", fallbackText: planningFallback(parsed.value), allocationChanged: false };
+  }
   if (!checked.ok) {
     return { ok: false, code: "invalid_output", fallbackText: planningFallback(parsed.value), allocationChanged: false };
   }

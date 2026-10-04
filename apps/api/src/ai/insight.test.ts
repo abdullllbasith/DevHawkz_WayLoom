@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { memoryAudit } from "./audit.js";
 import { explainInsight } from "./insight.js";
 import { AI_CONTRACT_VERSION } from "./input.js";
 import type { AiProvider } from "./provider.js";
@@ -27,6 +28,9 @@ test("an insight keeps the supplied metric, value, and period", async () => {
     capturedAt: "2026-06-02T10:00:00.000Z",
     provider,
     settings,
+    actorUserId: "11111111-1111-4111-8111-111111111111",
+    occurredAt: new Date("2026-06-02T10:00:00.000Z"),
+    audit: memoryAudit().writer,
   });
   assert.equal(insight.ok, true);
   if (!insight.ok) {
@@ -44,6 +48,9 @@ test("empty measurements and an invented metric stay controlled", async () => {
     capturedAt: "2026-06-02T10:00:00.000Z",
     provider: { id: "unused", complete: () => Promise.resolve(null) },
     settings,
+    actorUserId: "11111111-1111-4111-8111-111111111111",
+    occurredAt: new Date("2026-06-02T10:00:00.000Z"),
+    audit: memoryAudit().writer,
   });
   assert.equal(empty.ok, false);
   if (!empty.ok) {
@@ -68,6 +75,9 @@ test("empty measurements and an invented metric stay controlled", async () => {
       }),
     },
     settings,
+    actorUserId: "11111111-1111-4111-8111-111111111111",
+    occurredAt: new Date("2026-06-02T10:00:00.000Z"),
+    audit: memoryAudit().writer,
   });
   assert.equal(invented.ok, false);
   if (!invented.ok) {
