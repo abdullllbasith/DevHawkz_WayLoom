@@ -1,4 +1,5 @@
 import type { LogLevel } from "./config.js";
+import { currentCorrelationId } from "./correlation.js";
 
 const rank: Record<LogLevel, number> = {
   error: 0,
@@ -45,12 +46,14 @@ function write(level: LogLevel, severity: "error" | "info", event: string, messa
     return;
   }
   try {
+    const correlationId = currentCorrelationId();
     const line = formatLogLine({
       timestamp: new Date().toISOString(),
       service: "api",
       severity,
       event,
       message,
+      ...(correlationId === undefined ? {} : { correlationId }),
     });
     if (severity === "error") {
       console.error(line);

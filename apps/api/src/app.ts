@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NodeEnvironment } from "./config.js";
+import { resolveCorrelationId, withCorrelation } from "./correlation.js";
 import { logUnexpectedError, sendError, sendJson } from "./errors.js";
 import type { Logger } from "./log.js";
 import {
@@ -43,6 +44,9 @@ export function createApp(options: AppOptions) {
     request: IncomingMessage,
     response: ServerResponse,
   ): Promise<void> {
+    const correlationId = resolveCorrelationId(headerValue(request.headers["x-request-id"]));
+    response.setHeader("x-request-id", correlationId);
+    return withCorrelation(correlationId, async () => {
     try {
       const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
       const method = request.method ?? "GET";
@@ -267,6 +271,7 @@ export function createApp(options: AppOptions) {
         sendError(response, 500, "internal_error", "Internal server error.");
       }
     }
+    });
   };
 }
 
