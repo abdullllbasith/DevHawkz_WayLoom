@@ -40,3 +40,6 @@ backups/
 
 # Generated Prisma Client. `prisma generate` recreates it during the API build.
 apps/api/src/generated/
+
+.vercel
+.env*

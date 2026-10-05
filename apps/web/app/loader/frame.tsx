@@ -46,9 +46,6 @@ export function LoaderFrame({
             );
           })}
         </nav>
-        <div className="dispatcher-sidebar-footer loader-sidebar-footer">
-          <DispatcherLogout />
-        </div>
       </aside>
       <div className="dispatcher-main">
         <header className="dispatcher-header">
@@ -69,6 +66,7 @@ export function LoaderFrame({
                 <span className="dispatcher-user-role">Loader</span>
               </div>
             </div>
+            <DispatcherLogout />
           </div>
         </header>
         <main className="dispatcher-content">{children}</main>

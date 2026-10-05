@@ -129,10 +129,6 @@ export function DispatcherFrame({
             View Guide
           </button>
         </div>
-
-        <div className="dispatcher-sidebar-footer">
-          <DispatcherLogout />
-        </div>
       </aside>
 
       <div className="dispatcher-main">
@@ -198,6 +194,7 @@ export function DispatcherFrame({
                 <span className="dispatcher-user-role">Dispatcher</span>
               </div>
             </div>
+            <DispatcherLogout />
           </div>
         </header>
 

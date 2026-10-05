@@ -231,6 +231,38 @@ Providers, selected in server configuration:
 
 Full disclosure: [docs/ai-tool-disclosure.md](docs/ai-tool-disclosure.md). Authority rules: [docs/ai-service-boundary.md](docs/ai-service-boundary.md) and [docs/ai-governance.md](docs/ai-governance.md).
 
+### AI tools used during development
+
+The WayLoom team used ChatGPT and Cursor IDE while building the system. Those tools assisted development. They are separate from the AI provider that runs inside the application.
+
+Runtime decision support uses only the server settings in the provider table above. ChatGPT and Cursor are not values of `AI_PROVIDER`. The API does not call them, and they do not allocate, defer, or explain a stored plan. The team directed each use, reviewed the result, and decided what entered the repository.
+
+**ChatGPT** was used for:
+
+- Product and architecture reasoning
+- UX and UI ideation
+- Technical analysis
+- Documentation
+- Testing and debugging guidance
+- Development planning
+
+**Cursor IDE** was used for:
+
+- AI-assisted implementation
+- Code generation
+- Refactoring
+- Repository analysis
+- Test creation
+- Implementation review
+
+#### Development effort and AI resource constraints
+
+The team aimed to complete WayLoom as a fully functional, reliable solution within the available development time and resources. Because the project required substantial AI-assisted development and validation, the team collaboratively invested in paid AI plans and services to extend available development capacity.
+
+Even with those additional resources, the available AI usage and development time remained limited compared with the amount of work required to fully realize every aspect of the original vision.
+
+The team therefore prioritized the official competition requirements, the core logistics workflow, deterministic planning, offline capability, security, architecture, and the most valuable AI decision-support features. Any capability that was not safely implementable within the approved architecture was intentionally left unimplemented, and was not fabricated or presented as complete.
+
 ## Offline
 
 Offline recording is the Driver delivery outcome and proof of delivery only. Loader, Dispatcher, and Store Manager actions are not queued.

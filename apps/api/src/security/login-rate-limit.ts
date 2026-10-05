@@ -37,10 +37,24 @@ export function parseLoginRateLimit(
 }
 
 export function clientAddress(request: IncomingMessage): string | null {
-  const address = request.socket.remoteAddress;
-  if (address === undefined || address.length === 0) {
+  const socketAddress = request.socket?.remoteAddress;
+  if (socketAddress !== undefined && socketAddress.length > 0) {
+    return normalizeAddress(socketAddress);
+  }
+  const forwarded = request.headers["x-forwarded-for"];
+  const first =
+    typeof forwarded === "string"
+      ? forwarded.split(",")[0]?.trim()
+      : Array.isArray(forwarded)
+        ? forwarded[0]?.split(",")[0]?.trim()
+        : undefined;
+  if (first === undefined || first.length === 0) {
     return null;
   }
+  return normalizeAddress(first);
+}
+
+function normalizeAddress(address: string): string {
   return address.startsWith("::ffff:") ? address.slice("::ffff:".length) : address;
 }
 

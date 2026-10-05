@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "DATABASE_URL=postgresql://wayloom_app:build@127.0.0.1:5432/wayloom_development npm run build --workspace @wayloom/api",
+  "rewrites": [
+    { "source": "/health", "destination": "/api?wl=/health" },
+    { "source": "/ready", "destination": "/api?wl=/ready" },
+    { "source": "/api/:path*", "destination": "/api?wl=/api/:path*" }
+  ]
+}

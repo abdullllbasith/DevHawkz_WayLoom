@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server } from "node:http";
 import { readFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { dirname, resolve } from "node:path";
@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { createApp } from "../app.js";
-import { parseLoginRateLimit, createLoginRateLimiter } from "./login-rate-limit.js";
+import { clientAddress, parseLoginRateLimit, createLoginRateLimiter } from "./login-rate-limit.js";
 import type { Logger } from "../log.js";
 import type { AuthUserRecord, UserDirectory } from "./auth.js";
 import { hashPassword } from "./password.js";
@@ -82,9 +82,21 @@ test("login rate-limit configuration and addresses stay explicit", () => {
   });
   assert.equal(limiter.check({ loginIdentifier: "seed.store-manager", remoteAddress: null, now }).allowed, false);
   const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../src/security/login-rate-limit.ts"), "utf8");
-  assert.equal(source.includes("x-forwarded-for"), false);
+  assert.match(source, /socket\?\.remoteAddress/);
+  assert.match(source, /x-forwarded-for/);
   assert.equal(source.includes("password"), false);
   assert.equal(source.includes("console."), false);
+  assert.equal(
+    clientAddress({ socket: null, headers: { "x-forwarded-for": "203.0.113.9, 198.51.100.1" } } as unknown as IncomingMessage),
+    "203.0.113.9",
+  );
+  assert.equal(
+    clientAddress({
+      socket: { remoteAddress: "127.0.0.1" },
+      headers: { "x-forwarded-for": "203.0.113.9" },
+    } as unknown as IncomingMessage),
+    "127.0.0.1",
+  );
 });
 
 function directory(records: AuthUserRecord[]): UserDirectory {

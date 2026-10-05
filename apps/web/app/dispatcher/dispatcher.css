@@ -208,6 +208,22 @@ html:has(.dispatcher-shell) body {
   color: #0f172a;
 }
 
+.dispatcher-header-right .dispatcher-logout {
+  width: auto;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.dispatcher-header-right .dispatcher-logout:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Main Area */
 .dispatcher-main {
   display: flex;

@@ -51,9 +51,6 @@ export function DriverFrame({
             );
           })}
         </nav>
-        <div className="dispatcher-sidebar-footer driver-sidebar-footer">
-          <DispatcherLogout />
-        </div>
       </aside>
       <div className="dispatcher-main">
         <header className="dispatcher-header">
@@ -75,6 +72,7 @@ export function DriverFrame({
                 <span className="dispatcher-user-role">Driver</span>
               </div>
             </div>
+            <DispatcherLogout />
           </div>
         </header>
         <main className="dispatcher-content">{children}</main>
